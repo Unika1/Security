@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getJson } from "@/lib/clientApi";
 
 export default function ToursPage() {
@@ -28,9 +29,10 @@ export default function ToursPage() {
       ) : (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {tours.map((tour) => (
-            <article
+            <Link
               key={tour._id}
-              className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm"
+              href={`/tours/${tour._id}`}
+              className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
             >
               {tour.imageUrl && (
                 <img
@@ -68,7 +70,7 @@ export default function ToursPage() {
                 </span>
               </p>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       )}
