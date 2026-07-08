@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:https": "next dev --experimental-https",
+    "dev:https": "node open-browser.mjs",
+    "dev:https:no-open": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
