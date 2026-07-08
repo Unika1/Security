@@ -43,6 +43,30 @@ export async function postJson(path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// putJson — update something on the backend. Same shape as postJson,
+// just the PUT method (the convention for "replace/update this thing").
+export async function putJson(path, body) {
+  const csrfToken = readCookie(CSRF_COOKIE) || "";
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      [CSRF_HEADER]: csrfToken,
+    },
+    body: JSON.stringify(body || {}),
+  });
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 // postFile — upload a file (as FormData). We set the CSRF header but NOT a
 // Content-Type: the browser adds the correct multipart type by itself.
 export async function postFile(path, formData) {
