@@ -7,10 +7,25 @@ import { CITIES } from "../models/Tour.js";
   the database (protects data integrity and helps prevent injection/XSS).
 */
 
+/*
+  Password policy (shared by registration and password reset).
+  A strong password must be 8+ characters and mix character types so it can't
+  be guessed easily. Each rule has its own clear message so the user knows
+  exactly what is missing.
+*/
+export const passwordPolicy = z
+  .string()
+  .min(8, "Password must be at least 8 characters.")
+  .max(100, "Password must be 100 characters or less.")
+  .regex(/[a-z]/, "Password must include a lowercase letter.")
+  .regex(/[A-Z]/, "Password must include an uppercase letter.")
+  .regex(/[0-9]/, "Password must include a number.")
+  .regex(/[^A-Za-z0-9]/, "Password must include a symbol (e.g. !?@#).");
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters.").max(60),
   email: z.string().trim().toLowerCase().email("Please enter a valid email."),
-  password: z.string().min(8, "Password must be at least 8 characters.").max(100),
+  password: passwordPolicy,
 });
 
 export const loginSchema = z.object({
@@ -34,7 +49,7 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   email: z.string().trim().toLowerCase().email("Please enter a valid email."),
   code: z.string().trim().regex(/^\d{6}$/, "The code must be 6 digits."),
-  password: z.string().min(8, "Password must be at least 8 characters.").max(100),
+  password: passwordPolicy,
 });
 
 export const tourSchema = z.object({
