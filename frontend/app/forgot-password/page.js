@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postJson } from "@/lib/clientApi";
 import PasswordField from "../components/PasswordField";
+import PasswordStrength from "../components/PasswordStrength";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -155,6 +156,7 @@ export default function ForgotPasswordPage() {
             placeholder="At least 8 characters"
             minLength={8}
           />
+          <PasswordStrength password={password} />
 
           <PasswordField
             id="confirmPassword"

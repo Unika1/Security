@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postJson } from "@/lib/clientApi";
 import PasswordField from "../components/PasswordField";
+import PasswordStrength from "../components/PasswordStrength";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -108,6 +109,7 @@ export default function RegisterPage() {
           placeholder="At least 8 characters"
           minLength={8}
         />
+        <PasswordStrength password={password} />
 
         <PasswordField
           id="confirmPassword"
