@@ -21,6 +21,9 @@ const tourSchema = new mongoose.Schema(
 
     // Short selling points shown on the tour card (e.g. "Durbar Square").
     highlights: { type: [String], default: [] },
+
+    // Picture shown on the tour card ("/api/uploads/..." or empty for none).
+    imageUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );

@@ -45,6 +45,17 @@ export const tourSchema = z.object({
     .min(0, "Price cannot be negative.")
     .max(1000000),
   highlights: z.array(z.string().trim().min(1).max(80)).max(10).optional().default([]),
+  // Either one of our own uploaded files or empty. (No arbitrary text —
+  // this value ends up in an <img src>.)
+  imageUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .refine((url) => url === "" || url.startsWith("/api/uploads/"), {
+      message: "Image must be uploaded through the admin dashboard.",
+    })
+    .optional()
+    .default(""),
 });
 
 // Run a schema; return { ok, data } or { ok:false, error }.
