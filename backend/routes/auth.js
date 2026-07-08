@@ -8,10 +8,12 @@ import {
   loginSchema,
   otpSchema,
   resendOtpSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../lib/validation.js";
 import { requireCsrf } from "../middleware/csrf.js";
 import { createToken, authCookieOptions, AUTH_COOKIE } from "../lib/auth.js";
-import { sendOtpEmail } from "../utils/mailer.js";
+import { sendOtpEmail, sendResetEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 const MAX_OTP_ATTEMPTS = 5;
@@ -146,6 +148,77 @@ router.post("/verify-otp", requireCsrf, async (req, res) => {
     });
   } catch (err) {
     console.error("Verify OTP error:", err);
+    return res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+// POST /api/auth/forgot-password -> STEP 1: email a reset code.
+// NOTE: the answer is the same whether the account exists or not, so this
+// form can't be used to find out which emails are registered.
+router.post("/forgot-password", requireCsrf, async (req, res) => {
+  try {
+    const check = validate(forgotPasswordSchema, req.body);
+    if (!check.ok) return res.status(400).json({ error: check.error });
+    const { email } = check.data;
+
+    const user = await User.findOne({ email });
+    if (user) {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      user.resetHash = await bcrypt.hash(code, 10);
+      user.resetExpiresAt = new Date(Date.now() + OTP_MINUTES * 60 * 1000);
+      user.resetAttempts = 0;
+      await user.save();
+      await sendResetEmail(email, code);
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    return res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+// POST /api/auth/reset-password -> STEP 2: check the code, set the new password
+router.post("/reset-password", requireCsrf, async (req, res) => {
+  try {
+    const check = validate(resetPasswordSchema, req.body);
+    if (!check.ok) return res.status(400).json({ error: check.error });
+    const { email, code, password } = check.data;
+
+    const user = await User.findOne({ email });
+    if (!user || !user.resetHash || !user.resetExpiresAt) {
+      return res.status(400).json({ error: "No reset in progress. Please request a code first." });
+    }
+    if (user.resetExpiresAt.getTime() < Date.now()) {
+      return res.status(400).json({ error: "Your code has expired. Please request a new one." });
+    }
+    if (user.resetAttempts >= MAX_OTP_ATTEMPTS) {
+      user.resetHash = null;
+      user.resetExpiresAt = null;
+      await user.save();
+      return res.status(429).json({ error: "Too many attempts. Please request a new code." });
+    }
+
+    const codeOk = await bcrypt.compare(code, user.resetHash);
+    if (!codeOk) {
+      user.resetAttempts += 1;
+      await user.save();
+      return res.status(401).json({ error: "Incorrect code. Please try again." });
+    }
+
+    // Success — store the new password and clear ALL one-time codes.
+    user.passwordHash = await bcrypt.hash(password, 10);
+    user.resetHash = null;
+    user.resetExpiresAt = null;
+    user.resetAttempts = 0;
+    user.otpHash = null;
+    user.otpExpiresAt = null;
+    user.otpAttempts = 0;
+    await user.save();
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Reset password error:", err);
     return res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
