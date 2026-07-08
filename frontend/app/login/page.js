@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "1";
+  const justReset = searchParams.get("reset") === "1";
 
   // "password" = step 1 (enter email/password). "otp" = step 2 (enter code).
   const [step, setStep] = useState("password");
@@ -106,6 +107,12 @@ export default function LoginPage() {
         </p>
       )}
 
+      {justReset && step === "password" && (
+        <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          Password changed. Please log in with your new password.
+        </p>
+      )}
+
       {step === "password" ? (
         <form
           onSubmit={handlePasswordSubmit}
@@ -131,6 +138,14 @@ export default function LoginPage() {
             {loading ? "Checking…" : "Continue"}
           </SubmitButton>
           {error && <ErrorMessage>{error}</ErrorMessage>}
+          <p className="text-center text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-stone-500 hover:text-brand hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          </p>
         </form>
       ) : (
         <form
