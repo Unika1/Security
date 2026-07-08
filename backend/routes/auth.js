@@ -95,7 +95,9 @@ router.post("/verify-otp", requireCsrf, async (req, res) => {
 
     const token = createToken(user._id.toString());
     res.cookie(AUTH_COOKIE, token, authCookieOptions());
-    return res.json({ user: { id: user._id, name: user.name, email: user.email } });
+    return res.json({
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
   } catch (err) {
     console.error("Verify OTP error:", err);
     return res.status(500).json({ error: "Something went wrong. Please try again." });
@@ -122,7 +124,7 @@ router.get("/me", async (req, res) => {
       return res.json({ user: null });
     }
 
-    const user = await User.findById(payload.userId).select("name email createdAt");
+    const user = await User.findById(payload.userId).select("name email role createdAt");
     return res.json({ user });
   } catch (err) {
     console.error("Me error:", err);
