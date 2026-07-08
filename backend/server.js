@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -45,6 +46,9 @@ app.use(issueCsrfToken); // make sure every visitor has a CSRF token cookie
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/tours", tourRoutes);
+
+// Serve uploaded tour pictures (the frontend shows them via /api/uploads/...).
+app.use("/api/uploads", express.static(path.resolve("uploads")));
 
 // --- Start the server after connecting to the database ---
 connectToDatabase()
