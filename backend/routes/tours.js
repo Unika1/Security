@@ -55,6 +55,37 @@ router.post("/image", requireCsrf, requireAuth, requireAdmin, (req, res) => {
   });
 });
 
+// PUT /api/tours/:id -> update an existing tour (admin only)
+router.put("/:id", requireCsrf, requireAuth, requireAdmin, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid tour id." });
+    }
+
+    // The update goes through the exact same validation as creating.
+    const check = validate(tourSchema, req.body);
+    if (!check.ok) return res.status(400).json({ error: check.error });
+
+    const tour = await Tour.findById(req.params.id);
+    if (!tour) return res.status(404).json({ error: "Tour not found." });
+
+    // If the picture was replaced, delete the old file from uploads.
+    if (
+      tour.imageUrl?.startsWith("/api/uploads/") &&
+      tour.imageUrl !== check.data.imageUrl
+    ) {
+      fs.unlink(path.join(UPLOAD_DIR, path.basename(tour.imageUrl)), () => {});
+    }
+
+    tour.set(check.data);
+    await tour.save();
+    return res.json({ tour });
+  } catch (err) {
+    console.error("Update tour error:", err);
+    return res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
 // DELETE /api/tours/:id -> remove a tour (admin only)
 router.delete("/:id", requireCsrf, requireAuth, requireAdmin, async (req, res) => {
   try {
