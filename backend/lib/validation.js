@@ -28,13 +28,17 @@ export const resendOtpSchema = z.object({
 });
 
 export const tourSchema = z.object({
-  title: z.string().trim().min(3, "Title must be at least 3 characters.").max(100),
+  title: z
+    .string()
+    .trim()
+    .min(3, "Title must be at least 3 characters.")
+    .max(100, "Title must be 100 characters or less."),
   city: z.enum(CITIES, { message: "City must be one of the five CityMate cities." }),
   description: z
     .string()
     .trim()
     .min(10, "Description must be at least 10 characters.")
-    .max(2000),
+    .max(2000, "Description must be 2000 characters or less."),
   // z.coerce turns "3" (text from a form) into the number 3 before checking.
   durationHours: z.coerce
     .number({ message: "Duration must be a number of hours." })
@@ -43,8 +47,18 @@ export const tourSchema = z.object({
   price: z.coerce
     .number({ message: "Price must be a number." })
     .min(0, "Price cannot be negative.")
-    .max(1000000),
-  highlights: z.array(z.string().trim().min(1).max(80)).max(10).optional().default([]),
+    .max(1000000, "Price is too high."),
+  highlights: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(80, "Each highlight must be 80 characters or less (separate them with commas).")
+    )
+    .max(10, "You can add at most 10 highlights.")
+    .optional()
+    .default([]),
   // Either one of our own uploaded files or empty. (No arbitrary text —
   // this value ends up in an <img src>.)
   imageUrl: z
