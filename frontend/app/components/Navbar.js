@@ -67,6 +67,25 @@ export default function Navbar() {
                 </Link>
               </li>
             ))}
+
+            {/* The Admin link only appears for admin accounts. (The server
+                still checks the role on every admin request — hiding the link
+                is just tidier, not the security.) */}
+            {user?.role === "admin" && (
+              <li>
+                <Link
+                  href="/admin"
+                  aria-current={isActive("/admin") ? "page" : undefined}
+                  className={`rounded-full px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                    isActive("/admin")
+                      ? "bg-brand text-white"
+                      : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                  }`}
+                >
+                  Admin
+                </Link>
+              </li>
+            )}
           </ul>
 
           {/* Show "Log out" when signed in, otherwise "Login". */}

@@ -43,6 +43,26 @@ export async function postJson(path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// deleteJson — ask the backend to delete something. Like postJson, this is a
+// state-changing request, so it must carry the CSRF token too.
+export async function deleteJson(path) {
+  const csrfToken = readCookie(CSRF_COOKIE) || "";
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { [CSRF_HEADER]: csrfToken },
+  });
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 // getJson — read data from the backend (e.g. the current user).
 export async function getJson(path) {
   const res = await fetch(`${API_URL}${path}`, { credentials: "include" });

@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: { type: String, required: true },
 
+    // Role-based access control: normal visitors are "user"; only "admin"
+    // can manage tours. Promote an account with: npm run make-admin -- <email>
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+
     // Two-factor one-time code (we store a HASH of the code, not the code).
     otpHash: { type: String, default: null },
     otpExpiresAt: { type: Date, default: null },
