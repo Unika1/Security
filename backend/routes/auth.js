@@ -2,13 +2,32 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import { validate, registerSchema, loginSchema, otpSchema } from "../lib/validation.js";
+import {
+  validate,
+  registerSchema,
+  loginSchema,
+  otpSchema,
+  resendOtpSchema,
+} from "../lib/validation.js";
 import { requireCsrf } from "../middleware/csrf.js";
 import { createToken, authCookieOptions, AUTH_COOKIE } from "../lib/auth.js";
 import { sendOtpEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 const MAX_OTP_ATTEMPTS = 5;
+const OTP_MINUTES = 5; // how long a code stays valid
+const RESEND_COOLDOWN_SECONDS = 30; // minimum wait between two codes
+
+// Generate a fresh 6-digit code for this user, save its hash, and email it.
+// Used by both login (first code) and resend-otp (replacement code).
+async function issueOtp(user) {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  user.otpHash = await bcrypt.hash(code, 10);
+  user.otpExpiresAt = new Date(Date.now() + OTP_MINUTES * 60 * 1000);
+  user.otpAttempts = 0;
+  await user.save();
+  await sendOtpEmail(user.email, code);
+}
 
 // POST /api/auth/register -> create an account (does NOT log in)
 router.post("/register", requireCsrf, async (req, res) => {
@@ -45,16 +64,43 @@ router.post("/login", requireCsrf, async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    user.otpHash = await bcrypt.hash(code, 10);
-    user.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
-    user.otpAttempts = 0;
-    await user.save();
-
-    await sendOtpEmail(email, code);
+    await issueOtp(user);
     return res.json({ otpRequired: true, email });
   } catch (err) {
     console.error("Login error:", err);
+    return res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+// POST /api/auth/resend-otp -> email a fresh code (only mid-login, with cooldown)
+router.post("/resend-otp", requireCsrf, async (req, res) => {
+  try {
+    const check = validate(resendOtpSchema, req.body);
+    if (!check.ok) return res.status(400).json({ error: check.error });
+    const { email } = check.data;
+
+    const user = await User.findOne({ email });
+    // Only resend when a login is actually in progress (password step passed).
+    // Otherwise this endpoint could be used to send emails to anyone.
+    if (!user || !user.otpHash || !user.otpExpiresAt) {
+      return res.status(400).json({ error: "No login in progress. Please log in again." });
+    }
+
+    // Cooldown: a code is issued OTP_MINUTES before it expires, so we can
+    // work out when the last one was sent without storing an extra field.
+    const issuedAt = user.otpExpiresAt.getTime() - OTP_MINUTES * 60 * 1000;
+    const secondsSinceLast = (Date.now() - issuedAt) / 1000;
+    if (secondsSinceLast < RESEND_COOLDOWN_SECONDS) {
+      const wait = Math.ceil(RESEND_COOLDOWN_SECONDS - secondsSinceLast);
+      return res.status(429).json({
+        error: `Please wait ${wait} more second${wait === 1 ? "" : "s"} before requesting a new code.`,
+      });
+    }
+
+    await issueOtp(user);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Resend OTP error:", err);
     return res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });

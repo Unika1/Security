@@ -23,6 +23,10 @@ export const otpSchema = z.object({
   code: z.string().trim().regex(/^\d{6}$/, "The code must be 6 digits."),
 });
 
+export const resendOtpSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Please enter a valid email."),
+});
+
 export const tourSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters.").max(100),
   city: z.enum(CITIES, { message: "City must be one of the five CityMate cities." }),
