@@ -17,7 +17,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState(""); // green info message (e.g. "code re-sent")
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // STEP 1: send email + password. If correct, the server emails a code and
   // asks us to move to the code-entry step.
@@ -62,6 +64,27 @@ export default function LoginPage() {
       setError("Could not reach the server. Is it running?");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Ask the server to email a fresh code. The server refuses if the last one
+  // was sent under 30 seconds ago (it tells us how long to wait).
+  async function handleResend() {
+    setError("");
+    setNotice("");
+    setResending(true);
+    try {
+      const { ok, data } = await postJson("/api/auth/resend-otp", { email });
+      if (!ok) {
+        setError(data?.error || "Could not resend the code.");
+        return;
+      }
+      setNotice("A new code was sent. Check your email.");
+      setCode("");
+    } catch {
+      setError("Could not reach the server. Is it running?");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -127,12 +150,26 @@ export default function LoginPage() {
             {loading ? "Verifying…" : "Verify and log in"}
           </SubmitButton>
           {error && <ErrorMessage>{error}</ErrorMessage>}
+          {notice && (
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+              {notice}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="w-full text-sm font-semibold text-brand hover:underline disabled:opacity-60"
+          >
+            {resending ? "Sending a new code…" : "Didn't get it? Resend code"}
+          </button>
           <button
             type="button"
             onClick={() => {
               setStep("password");
               setCode("");
               setError("");
+              setNotice("");
             }}
             className="w-full text-sm text-stone-500 hover:underline"
           >
