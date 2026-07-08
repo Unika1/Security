@@ -44,6 +44,22 @@ export default function AdminPage() {
     event.preventDefault();
     setError("");
     setSuccess("");
+
+    // Our own checks (the browser's default popups are turned off with
+    // noValidate below, so all messages use the same styled boxes).
+    if (!title.trim() || !description.trim() || durationHours === "" || price === "") {
+      setError("Please fill in the title, description, duration and price.");
+      return;
+    }
+    if (Number(durationHours) < 1) {
+      setError("Duration must be at least 1 hour.");
+      return;
+    }
+    if (Number(price) < 0) {
+      setError("Price cannot be negative.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -149,6 +165,7 @@ export default function AdminPage() {
 
       <form
         onSubmit={handleSubmit}
+        noValidate
         className="mt-8 space-y-5 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
       >
         <div>
@@ -199,7 +216,8 @@ export default function AdminPage() {
               min={1}
               max={72}
               value={durationHours}
-              onChange={(e) => setDurationHours(e.target.value)}
+              // strip any minus sign, so a negative can't even be typed
+              onChange={(e) => setDurationHours(e.target.value.replace("-", ""))}
               placeholder="3"
               className={inputClass}
             />
@@ -215,7 +233,8 @@ export default function AdminPage() {
               required
               min={0}
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              // strip any minus sign, so a negative can't even be typed
+              onChange={(e) => setPrice(e.target.value.replace("-", ""))}
               placeholder="1500"
               className={inputClass}
             />

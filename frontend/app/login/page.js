@@ -109,6 +109,7 @@ export default function LoginPage() {
       {step === "password" ? (
         <form
           onSubmit={handlePasswordSubmit}
+          noValidate
           className="mt-8 space-y-5 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
         >
           <Field
@@ -134,6 +135,7 @@ export default function LoginPage() {
       ) : (
         <form
           onSubmit={handleOtpSubmit}
+          noValidate
           className="mt-8 space-y-5 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
         >
           <Field
