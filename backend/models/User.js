@@ -27,6 +27,14 @@ const userSchema = new mongoose.Schema(
     otpHash: { type: String, default: null },
     otpExpiresAt: { type: Date, default: null },
     otpAttempts: { type: Number, default: 0 },
+
+    // Password-reset code (same idea: hash only, short expiry, few attempts).
+    resetHash: { type: String, default: null },
+    resetExpiresAt: { type: Date, default: null },
+    resetAttempts: { type: Number, default: 0 },
+
+    // Tours this user bookmarked (references into the tours collection).
+    savedTours: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tour" }],
   },
   { timestamps: true }
 );

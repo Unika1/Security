@@ -33,24 +33,38 @@ async function getTransporter() {
   return cachedTransporter;
 }
 
-export async function sendOtpEmail(to, code) {
+// Shared sender for our two kinds of code emails (login and password reset).
+async function sendCodeEmail(to, code, subject, purposeLine) {
   const transporter = await getTransporter();
   const info = await transporter.sendMail({
     from: process.env.EMAIL_FROM || "CityMate <no-reply@citymate.local>",
     to,
-    subject: "Your CityMate login code",
-    text: `Your CityMate verification code is ${code}. It expires in 5 minutes.`,
-    html: `<p>Your CityMate verification code is:</p>
+    subject,
+    text: `${purposeLine} Your code is ${code}. It expires in 5 minutes.`,
+    html: `<p>${purposeLine} Your code is:</p>
            <p style="font-size:24px;font-weight:bold;letter-spacing:4px">${code}</p>
-           <p>It expires in 5 minutes. If you did not try to log in, ignore this email.</p>`,
+           <p>It expires in 5 minutes. If this wasn't you, ignore this email.</p>`,
   });
 
   const preview = nodemailer.getTestMessageUrl(info);
   if (preview) {
     console.log("\n========================================");
-    console.log("OTP EMAIL PREVIEW (open this to see the code):");
+    console.log("EMAIL PREVIEW (open this to see the code):");
     console.log(preview);
     console.log("========================================\n");
   }
   return info;
+}
+
+export function sendOtpEmail(to, code) {
+  return sendCodeEmail(to, code, "Your CityMate login code", "You are logging in to CityMate.");
+}
+
+export function sendResetEmail(to, code) {
+  return sendCodeEmail(
+    to,
+    code,
+    "Your CityMate password reset code",
+    "You asked to reset your CityMate password."
+  );
 }

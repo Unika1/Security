@@ -27,6 +27,16 @@ export const resendOtpSchema = z.object({
   email: z.string().trim().toLowerCase().email("Please enter a valid email."),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Please enter a valid email."),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Please enter a valid email."),
+  code: z.string().trim().regex(/^\d{6}$/, "The code must be 6 digits."),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(100),
+});
+
 export const tourSchema = z.object({
   title: z
     .string()
