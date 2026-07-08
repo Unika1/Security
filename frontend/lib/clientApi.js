@@ -43,6 +43,27 @@ export async function postJson(path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// postFile — upload a file (as FormData). We set the CSRF header but NOT a
+// Content-Type: the browser adds the correct multipart type by itself.
+export async function postFile(path, formData) {
+  const csrfToken = readCookie(CSRF_COOKIE) || "";
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { [CSRF_HEADER]: csrfToken },
+    body: formData,
+  });
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 // deleteJson — ask the backend to delete something. Like postJson, this is a
 // state-changing request, so it must carry the CSRF token too.
 export async function deleteJson(path) {
