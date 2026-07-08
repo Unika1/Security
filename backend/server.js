@@ -6,6 +6,7 @@ import helmet from "helmet";
 
 import connectToDatabase from "./config/db.js";
 import authRoutes from "./routes/auth.js";
+import tourRoutes from "./routes/tours.js";
 import { issueCsrfToken } from "./middleware/csrf.js";
 
 const app = express();
@@ -43,6 +44,7 @@ app.use(issueCsrfToken); // make sure every visitor has a CSRF token cookie
 // --- Routes ---
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
+app.use("/api/tours", tourRoutes);
 
 // --- Start the server after connecting to the database ---
 connectToDatabase()
