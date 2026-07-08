@@ -12,6 +12,7 @@ import {
   resetPasswordSchema,
 } from "../lib/validation.js";
 import { requireCsrf } from "../middleware/csrf.js";
+import { authLimiter, registerLimiter } from "../middleware/rateLimit.js";
 import { createToken, authCookieOptions, AUTH_COOKIE } from "../lib/auth.js";
 import { sendOtpEmail, sendResetEmail } from "../utils/mailer.js";
 
@@ -32,7 +33,7 @@ async function issueOtp(user) {
 }
 
 // POST /api/auth/register -> create an account (does NOT log in)
-router.post("/register", requireCsrf, async (req, res) => {
+router.post("/register", registerLimiter, requireCsrf, async (req, res) => {
   try {
     const check = validate(registerSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
@@ -53,7 +54,7 @@ router.post("/register", requireCsrf, async (req, res) => {
 });
 
 // POST /api/auth/login -> STEP 1: check password, email a 6-digit code
-router.post("/login", requireCsrf, async (req, res) => {
+router.post("/login", authLimiter, requireCsrf, async (req, res) => {
   try {
     const check = validate(loginSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
@@ -108,7 +109,7 @@ router.post("/resend-otp", requireCsrf, async (req, res) => {
 });
 
 // POST /api/auth/verify-otp -> STEP 2: check the code, then log in
-router.post("/verify-otp", requireCsrf, async (req, res) => {
+router.post("/verify-otp", authLimiter, requireCsrf, async (req, res) => {
   try {
     const check = validate(otpSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
@@ -155,7 +156,7 @@ router.post("/verify-otp", requireCsrf, async (req, res) => {
 // POST /api/auth/forgot-password -> STEP 1: email a reset code.
 // NOTE: the answer is the same whether the account exists or not, so this
 // form can't be used to find out which emails are registered.
-router.post("/forgot-password", requireCsrf, async (req, res) => {
+router.post("/forgot-password", authLimiter, requireCsrf, async (req, res) => {
   try {
     const check = validate(forgotPasswordSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
@@ -179,7 +180,7 @@ router.post("/forgot-password", requireCsrf, async (req, res) => {
 });
 
 // POST /api/auth/reset-password -> STEP 2: check the code, set the new password
-router.post("/reset-password", requireCsrf, async (req, res) => {
+router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
   try {
     const check = validate(resetPasswordSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
