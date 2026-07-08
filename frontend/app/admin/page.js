@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getJson, postJson, postFile, deleteJson } from "@/lib/clientApi";
+import { getJson, postJson, putJson, postFile, deleteJson } from "@/lib/clientApi";
 
 // The five cities tours can belong to (must match the backend's list).
 const CITIES = ["Kathmandu", "Bhaktapur", "Patan", "Pokhara", "Lumbini"];
@@ -23,6 +23,10 @@ export default function AdminPage() {
   const [highlights, setHighlights] = useState("");
   const [imageFile, setImageFile] = useState(null); // the chosen picture (or null)
 
+  // When editing an existing tour, these remember which one and its picture.
+  const [editingId, setEditingId] = useState(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState("");
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,6 +42,36 @@ export default function AdminPage() {
   async function refreshTours() {
     const { data } = await getJson("/api/tours");
     setTours(data?.tours || []);
+  }
+
+  // Put the form back to its empty "add a new tour" state.
+  function resetForm(formElement) {
+    setTitle("");
+    setCity(CITIES[0]);
+    setDescription("");
+    setDurationHours("");
+    setPrice("");
+    setHighlights("");
+    setImageFile(null);
+    setEditingId(null);
+    setCurrentImageUrl("");
+    if (formElement) formElement.reset(); // clears the file picker
+  }
+
+  // Copy a tour's values into the form so it can be edited.
+  function handleEdit(tour) {
+    setEditingId(tour._id);
+    setTitle(tour.title);
+    setCity(tour.city);
+    setDescription(tour.description);
+    setDurationHours(String(tour.durationHours));
+    setPrice(String(tour.price));
+    setHighlights((tour.highlights || []).join(", "));
+    setImageFile(null);
+    setCurrentImageUrl(tour.imageUrl || "");
+    setError("");
+    setSuccess("");
+    window.scrollTo({ top: 0, behavior: "smooth" }); // the form is at the top
   }
 
   async function handleSubmit(event) {
@@ -63,9 +97,8 @@ export default function AdminPage() {
     setSaving(true);
 
     try {
-      // If a picture was chosen, upload it first — the server sends back the
-      // URL we then store on the tour.
-      let imageUrl = "";
+      // Keep the existing picture (when editing) unless a new one was chosen.
+      let imageUrl = currentImageUrl;
       if (imageFile) {
         const formData = new FormData();
         formData.append("image", imageFile);
@@ -77,7 +110,7 @@ export default function AdminPage() {
         imageUrl = upload.data.url;
       }
 
-      const { ok, data } = await postJson("/api/tours", {
+      const body = {
         title,
         city,
         description,
@@ -89,21 +122,22 @@ export default function AdminPage() {
           .split(",")
           .map((h) => h.trim())
           .filter(Boolean),
-      });
+      };
+
+      // Editing updates the existing tour; otherwise we create a new one.
+      const { ok, data } = editingId
+        ? await putJson(`/api/tours/${editingId}`, body)
+        : await postJson("/api/tours", body);
 
       if (!ok) {
         setError(data?.error || "Could not save the tour.");
         return;
       }
 
-      setSuccess(`"${data.tour.title}" was added.`);
-      setTitle("");
-      setDescription("");
-      setDurationHours("");
-      setPrice("");
-      setHighlights("");
-      setImageFile(null);
-      event.target.reset(); // clears the file picker (it isn't tied to state)
+      setSuccess(
+        editingId ? `"${data.tour.title}" was updated.` : `"${data.tour.title}" was added.`
+      );
+      resetForm(event.target);
       refreshTours();
     } catch {
       setError("Could not reach the server. Is the backend running?");
@@ -168,6 +202,11 @@ export default function AdminPage() {
         noValidate
         className="mt-8 space-y-5 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
       >
+        {editingId && (
+          <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-brand">
+            Editing "{title}" — change the fields below and press Save changes.
+          </p>
+        )}
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-stone-700">
             Tour title
@@ -287,13 +326,26 @@ export default function AdminPage() {
             onChange={(e) => setImageFile(e.target.files[0] || null)}
             className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-stone-700 hover:file:bg-stone-200"
           />
-          {imageFile && (
+          {imageFile ? (
             // URL.createObjectURL shows the picture before it's uploaded.
             <img
               src={URL.createObjectURL(imageFile)}
               alt="Preview of the chosen picture"
               className="mt-3 h-32 w-full rounded-lg object-cover"
             />
+          ) : (
+            currentImageUrl && (
+              <div className="mt-3">
+                <img
+                  src={currentImageUrl}
+                  alt="Current tour picture"
+                  className="h-32 w-full rounded-lg object-cover"
+                />
+                <p className="mt-1 text-xs text-stone-500">
+                  Current picture — choose a file above to replace it.
+                </p>
+              </div>
+            )
           )}
         </div>
 
@@ -302,8 +354,18 @@ export default function AdminPage() {
           disabled={saving}
           className="w-full rounded-lg bg-brand py-2.5 font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Add tour"}
+          {saving ? "Saving…" : editingId ? "Save changes" : "Add tour"}
         </button>
+
+        {editingId && (
+          <button
+            type="button"
+            onClick={() => resetForm()}
+            className="w-full text-sm text-stone-500 hover:underline"
+          >
+            Cancel editing
+          </button>
+        )}
 
         {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -343,12 +405,20 @@ export default function AdminPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleDelete(tour)}
-                className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-              >
-                Delete
-              </button>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => handleEdit(tour)}
+                  className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(tour)}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
             </li>
           ))}
         </ul>
