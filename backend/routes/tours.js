@@ -21,6 +21,21 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/tours/:id -> one tour with all its details (public)
+router.get("/:id", async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid tour id." });
+    }
+    const tour = await Tour.findById(req.params.id);
+    if (!tour) return res.status(404).json({ error: "Tour not found." });
+    return res.json({ tour });
+  } catch (err) {
+    console.error("Get tour error:", err);
+    return res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
 // POST /api/tours -> create a tour (admin only)
 // Middleware runs left to right: CSRF check, then login check, then role check.
 router.post("/", requireCsrf, requireAuth, requireAdmin, async (req, res) => {
