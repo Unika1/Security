@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getJson, postJson, deleteJson } from "@/lib/clientApi";
+import { getJson, postJson, postFile, deleteJson } from "@/lib/clientApi";
 
 // The five cities tours can belong to (must match the backend's list).
 const CITIES = ["Kathmandu", "Bhaktapur", "Patan", "Pokhara", "Lumbini"];
@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [durationHours, setDurationHours] = useState("");
   const [price, setPrice] = useState("");
   const [highlights, setHighlights] = useState("");
+  const [imageFile, setImageFile] = useState(null); // the chosen picture (or null)
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -46,12 +47,27 @@ export default function AdminPage() {
     setSaving(true);
 
     try {
+      // If a picture was chosen, upload it first — the server sends back the
+      // URL we then store on the tour.
+      let imageUrl = "";
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+        const upload = await postFile("/api/tours/image", formData);
+        if (!upload.ok) {
+          setError(upload.data?.error || "Could not upload the image.");
+          return;
+        }
+        imageUrl = upload.data.url;
+      }
+
       const { ok, data } = await postJson("/api/tours", {
         title,
         city,
         description,
         durationHours,
         price,
+        imageUrl,
         // Turn "Durbar Square, Local lunch" into ["Durbar Square", "Local lunch"].
         highlights: highlights
           .split(",")
@@ -70,6 +86,8 @@ export default function AdminPage() {
       setDurationHours("");
       setPrice("");
       setHighlights("");
+      setImageFile(null);
+      event.target.reset(); // clears the file picker (it isn't tied to state)
       refreshTours();
     } catch {
       setError("Could not reach the server. Is the backend running?");
@@ -239,6 +257,27 @@ export default function AdminPage() {
           />
         </div>
 
+        <div>
+          <label htmlFor="image" className="block text-sm font-medium text-stone-700">
+            Picture <span className="font-normal text-stone-500">(JPG/PNG/WebP, max 2 MB, optional)</span>
+          </label>
+          <input
+            id="image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => setImageFile(e.target.files[0] || null)}
+            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-stone-700 hover:file:bg-stone-200"
+          />
+          {imageFile && (
+            // URL.createObjectURL shows the picture before it's uploaded.
+            <img
+              src={URL.createObjectURL(imageFile)}
+              alt="Preview of the chosen picture"
+              className="mt-3 h-32 w-full rounded-lg object-cover"
+            />
+          )}
+        </div>
+
         <button
           type="submit"
           disabled={saving}
@@ -270,11 +309,20 @@ export default function AdminPage() {
               key={tour._id}
               className="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm"
             >
-              <div>
-                <p className="font-semibold text-stone-900">{tour.title}</p>
-                <p className="text-sm text-stone-600">
-                  {tour.city} · {tour.durationHours}h · NPR {tour.price}
-                </p>
+              <div className="flex items-center gap-3">
+                {tour.imageUrl && (
+                  <img
+                    src={tour.imageUrl}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                  />
+                )}
+                <div>
+                  <p className="font-semibold text-stone-900">{tour.title}</p>
+                  <p className="text-sm text-stone-600">
+                    {tour.city} · {tour.durationHours}h · NPR {tour.price}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => handleDelete(tour)}

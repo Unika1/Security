@@ -30,8 +30,16 @@ export default function ToursPage() {
           {tours.map((tour) => (
             <article
               key={tour._id}
-              className="flex flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+              className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm"
             >
+              {tour.imageUrl && (
+                <img
+                  src={tour.imageUrl}
+                  alt={tour.title}
+                  className="h-40 w-full object-cover"
+                />
+              )}
+              <div className="flex flex-1 flex-col p-5">
               <span className="self-start rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
                 {tour.city}
               </span>
@@ -59,6 +67,7 @@ export default function ToursPage() {
                   {tour.price === 0 ? "Free" : `NPR ${tour.price}`}
                 </span>
               </p>
+              </div>
             </article>
           ))}
         </div>
