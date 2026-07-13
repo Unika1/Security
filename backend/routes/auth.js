@@ -13,13 +13,19 @@ import {
 } from "../lib/validation.js";
 import { requireCsrf } from "../middleware/csrf.js";
 import { authLimiter, registerLimiter } from "../middleware/rateLimit.js";
-import { createToken, authCookieOptions, AUTH_COOKIE } from "../lib/auth.js";
+import { createToken, authCookieOptions, AUTH_COOKIE, requireAuth } from "../lib/auth.js";
 import { sendOtpEmail, sendResetEmail } from "../utils/mailer.js";
+import { logEvent } from "../lib/audit.js";
+import { encrypt, decrypt } from "../lib/crypto.js";
 
 const router = express.Router();
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_MINUTES = 5; // how long a code stays valid
 const RESEND_COOLDOWN_SECONDS = 30; // minimum wait between two codes
+const PASSWORD_EXPIRY_DAYS = 90; // force a change after this many days
+const MAX_FAILED_LOGINS = 5; // lock the account after this many wrong passwords
+const LOCK_MINUTES = 15; // how long the account stays locked
+const MAX_PREVIOUS_PASSWORDS = 5; // how many old passwords we remember
 
 // Generate a fresh 6-digit code for this user, save its hash, and email it.
 // Used by both login (first code) and resend-otp (replacement code).
@@ -45,7 +51,8 @@ router.post("/register", registerLimiter, requireCsrf, async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, passwordHash });
+    const user = await User.create({ name, email, passwordHash, passwordChangedAt: new Date() });
+    await logEvent(req, "register", { email, userId: user._id });
     return res.status(201).json({ user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
     console.error("Register error:", err);
@@ -61,13 +68,51 @@ router.post("/login", authLimiter, requireCsrf, async (req, res) => {
     const { email, password } = check.data;
 
     const user = await User.findOne({ email });
+
+    // Account lockout: if this account is currently locked, refuse early.
+    if (user && user.lockUntil && user.lockUntil.getTime() > Date.now()) {
+      const mins = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+      await logEvent(req, "login_locked", { email, userId: user._id });
+      return res.status(423).json({
+        error: `Account locked due to too many failed attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`,
+      });
+    }
+
     const passwordOk = user ? await bcrypt.compare(password, user.passwordHash) : false;
     // Same error for unknown email and wrong password (don't reveal which).
     if (!user || !passwordOk) {
+      // Count the failed attempt against the account and lock if over the limit.
+      if (user) {
+        user.failedLoginAttempts += 1;
+        if (user.failedLoginAttempts >= MAX_FAILED_LOGINS) {
+          user.lockUntil = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
+          user.failedLoginAttempts = 0;
+        }
+        await user.save();
+        await logEvent(req, "login_failed", { email, userId: user._id });
+      } else {
+        await logEvent(req, "login_failed", { email });
+      }
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    await issueOtp(user);
+    // Correct password — clear any failed-attempt counters.
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+
+    // Password expiry: force a reset if the password is older than the limit.
+    const ageDays = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays > PASSWORD_EXPIRY_DAYS) {
+      await user.save();
+      await logEvent(req, "password_expired", { email, userId: user._id });
+      return res.status(403).json({
+        passwordExpired: true,
+        error: "Your password has expired. Please reset it to continue.",
+      });
+    }
+
+    await issueOtp(user); // also saves the user
+    await logEvent(req, "login_password_ok", { email, userId: user._id });
     return res.json({ otpRequired: true, email });
   } catch (err) {
     console.error("Login error:", err);
@@ -144,6 +189,7 @@ router.post("/verify-otp", authLimiter, requireCsrf, async (req, res) => {
 
     const token = createToken(user._id.toString());
     res.cookie(AUTH_COOKIE, token, authCookieOptions());
+    await logEvent(req, "login_success", { email, userId: user._id });
     return res.json({
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
@@ -207,8 +253,26 @@ router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
       return res.status(401).json({ error: "Incorrect code. Please try again." });
     }
 
-    // Success — store the new password and clear ALL one-time codes.
-    user.passwordHash = await bcrypt.hash(password, 10);
+    // Password reuse prevention: the new password must not match the current
+    // one or any of the remembered previous passwords.
+    const oldHashes = [user.passwordHash, ...(user.previousPasswords || [])];
+    for (const h of oldHashes) {
+      if (await bcrypt.compare(password, h)) {
+        return res.status(400).json({ error: "You cannot reuse a previous password." });
+      }
+    }
+
+    // Success — remember the old password, store the new one, refresh dates,
+    // clear all one-time codes, and unlock the account.
+    const newHash = await bcrypt.hash(password, 10);
+    user.previousPasswords = [user.passwordHash, ...(user.previousPasswords || [])].slice(
+      0,
+      MAX_PREVIOUS_PASSWORDS
+    );
+    user.passwordHash = newHash;
+    user.passwordChangedAt = new Date();
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
     user.resetHash = null;
     user.resetExpiresAt = null;
     user.resetAttempts = 0;
@@ -217,6 +281,7 @@ router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
     user.otpAttempts = 0;
     await user.save();
 
+    await logEvent(req, "password_reset", { email, userId: user._id });
     return res.json({ ok: true });
   } catch (err) {
     console.error("Reset password error:", err);
@@ -225,8 +290,9 @@ router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
 });
 
 // POST /api/auth/logout -> clear the login cookie
-router.post("/logout", requireCsrf, (req, res) => {
+router.post("/logout", requireCsrf, async (req, res) => {
   res.clearCookie(AUTH_COOKIE, { path: "/" });
+  await logEvent(req, "logout");
   return res.json({ ok: true });
 });
 
@@ -244,10 +310,43 @@ router.get("/me", async (req, res) => {
       return res.json({ user: null });
     }
 
-    const user = await User.findById(payload.userId).select("name email role createdAt");
-    return res.json({ user });
+    const user = await User.findById(payload.userId).select(
+      "name email role createdAt phoneEncrypted"
+    );
+    if (!user) return res.json({ user: null });
+    // Decrypt the phone number for its owner only, at read time.
+    const userOut = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      phone: decrypt(user.phoneEncrypted),
+    };
+    return res.json({ user: userOut });
   } catch (err) {
     console.error("Me error:", err);
+    return res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+// PUT /api/auth/profile -> update the logged-in user's profile (phone number).
+// The phone is stored AES-encrypted; we never keep it in plaintext at rest.
+router.put("/profile", requireCsrf, requireAuth, async (req, res) => {
+  try {
+    const phone = String(req.body?.phone ?? "").trim();
+    if (phone && !/^[+\d][\d\s-]{6,19}$/.test(phone)) {
+      return res.status(400).json({ error: "Please enter a valid phone number." });
+    }
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    user.phoneEncrypted = phone ? encrypt(phone) : "";
+    await user.save();
+    await logEvent(req, "profile_update", { email: user.email, userId: user._id });
+    return res.json({ ok: true, phone });
+  } catch (err) {
+    console.error("Profile update error:", err);
     return res.status(500).json({ error: "Something went wrong." });
   }
 });
