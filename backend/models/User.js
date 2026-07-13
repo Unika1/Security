@@ -19,6 +19,21 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: { type: String, required: true },
 
+    // Password policy support:
+    //  - previousPasswords: hashes of old passwords, so they can't be reused
+    //  - passwordChangedAt: when the password was last set (for 90-day expiry)
+    previousPasswords: { type: [String], default: [] },
+    passwordChangedAt: { type: Date, default: Date.now },
+
+    // Account lockout (brute-force defence at the account level):
+    //  - failedLoginAttempts: consecutive wrong passwords
+    //  - lockUntil: if set and in the future, login is blocked
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date, default: null },
+
+    // Optional profile detail, stored AES-encrypted at rest (see lib/crypto.js).
+    phoneEncrypted: { type: String, default: "" },
+
     // Role-based access control: normal visitors are "user"; only "admin"
     // can manage tours. Promote an account with: npm run make-admin -- <email>
     role: { type: String, enum: ["user", "admin"], default: "user" },
