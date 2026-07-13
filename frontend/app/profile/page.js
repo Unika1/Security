@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getJson } from "@/lib/clientApi";
+import { getJson, putJson } from "@/lib/clientApi";
 import LogoutButton from "../components/LogoutButton";
 
 export default function ProfilePage() {
@@ -11,12 +11,19 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Editable phone number (stored AES-encrypted on the server).
+  const [phone, setPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneMsg, setPhoneMsg] = useState("");
+  const [phoneErr, setPhoneErr] = useState("");
+
   // Ask the backend who is logged in. If nobody, send them to the login page.
   useEffect(() => {
     getJson("/api/auth/me")
       .then(({ data }) => {
         if (data?.user) {
           setUser(data.user);
+          setPhone(data.user.phone || "");
         } else {
           router.replace("/login");
         }
@@ -24,6 +31,25 @@ export default function ProfilePage() {
       .catch(() => router.replace("/login"))
       .finally(() => setLoading(false));
   }, [router]);
+
+  async function handleSavePhone(event) {
+    event.preventDefault();
+    setPhoneErr("");
+    setPhoneMsg("");
+    setSavingPhone(true);
+    try {
+      const { ok, data } = await putJson("/api/auth/profile", { phone });
+      if (!ok) {
+        setPhoneErr(data?.error || "Could not save.");
+        return;
+      }
+      setPhoneMsg("Saved. Your phone number is stored encrypted.");
+    } catch {
+      setPhoneErr("Could not reach the server.");
+    } finally {
+      setSavingPhone(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -84,6 +110,33 @@ export default function ProfilePage() {
               </div>
             )}
           </dl>
+
+          {/* Editable phone number — stored AES-encrypted on the server. */}
+          <form onSubmit={handleSavePhone} className="mt-5 border-t border-stone-100 pt-5">
+            <label htmlFor="phone" className="block text-sm font-medium text-stone-700">
+              Phone number{" "}
+              <span className="font-normal text-stone-400">(stored encrypted, optional)</span>
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+977 98XXXXXXXX"
+                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-stone-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              />
+              <button
+                type="submit"
+                disabled={savingPhone}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60"
+              >
+                {savingPhone ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {phoneMsg && <p className="mt-2 text-sm text-green-600">{phoneMsg}</p>}
+            {phoneErr && <p className="mt-2 text-sm text-red-600">{phoneErr}</p>}
+          </form>
         </div>
       </div>
 

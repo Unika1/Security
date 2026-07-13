@@ -14,6 +14,9 @@ export default function AdminPage() {
   // The list of existing tours shown under the form.
   const [tours, setTours] = useState([]);
 
+  // Audit-trail entries (security event log), shown at the bottom for admins.
+  const [logs, setLogs] = useState([]);
+
   // Form fields for a new tour.
   const [title, setTitle] = useState("");
   const [city, setCity] = useState(CITIES[0]);
@@ -34,7 +37,10 @@ export default function AdminPage() {
   // On first load: find out who is logged in, and fetch the tours.
   useEffect(() => {
     getJson("/api/auth/me")
-      .then(({ data }) => setMe(data?.user || null))
+      .then(({ data }) => {
+        setMe(data?.user || null);
+        if (data?.user?.role === "admin") refreshLogs();
+      })
       .catch(() => setMe(null));
     refreshTours();
   }, []);
@@ -42,6 +48,11 @@ export default function AdminPage() {
   async function refreshTours() {
     const { data } = await getJson("/api/tours");
     setTours(data?.tours || []);
+  }
+
+  async function refreshLogs() {
+    const { data } = await getJson("/api/admin/logs");
+    setLogs(data?.logs || []);
   }
 
   // Put the form back to its empty "add a new tour" state.
@@ -422,6 +433,49 @@ export default function AdminPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Audit trail: recent security events, for monitoring and review. */}
+      <div className="mt-12 flex items-center justify-between">
+        <h2 className="text-xl font-bold text-stone-900">Security audit log</h2>
+        <button
+          onClick={refreshLogs}
+          className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+        >
+          Refresh
+        </button>
+      </div>
+      <p className="mt-1 text-sm text-stone-600">
+        The 200 most recent user and admin actions (no passwords or codes are stored).
+      </p>
+
+      {logs.length === 0 ? (
+        <p className="mt-4 text-stone-600">No events recorded yet.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto rounded-xl border border-stone-200">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-stone-50 text-stone-500">
+              <tr>
+                <th className="px-3 py-2 font-medium">Time</th>
+                <th className="px-3 py-2 font-medium">Action</th>
+                <th className="px-3 py-2 font-medium">Account</th>
+                <th className="px-3 py-2 font-medium">IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr key={log._id} className="border-t border-stone-100">
+                  <td className="whitespace-nowrap px-3 py-2 text-stone-600">
+                    {new Date(log.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-3 py-2 font-medium text-stone-900">{log.action}</td>
+                  <td className="px-3 py-2 text-stone-600">{log.email || "—"}</td>
+                  <td className="px-3 py-2 text-stone-500">{log.ip || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

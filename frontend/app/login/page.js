@@ -35,6 +35,11 @@ export default function LoginPage() {
         password,
       });
       if (!ok) {
+        // Password expired — send the user to reset it.
+        if (data?.passwordExpired) {
+          router.push("/forgot-password?expired=1");
+          return;
+        }
         setError(data?.error || "Login failed.");
         return;
       }

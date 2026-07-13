@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { postJson } from "@/lib/clientApi";
 import PasswordField from "../components/PasswordField";
@@ -9,6 +9,8 @@ import PasswordStrength from "../components/PasswordStrength";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const expired = searchParams.get("expired") === "1";
 
   // "email" = ask for the account email. "reset" = enter code + new password.
   const [step, setStep] = useState("email");
@@ -85,6 +87,12 @@ export default function ForgotPasswordPage() {
           ? "Enter your account email and we'll send you a 6-digit reset code."
           : `Enter the code we sent to ${email} and choose a new password.`}
       </p>
+
+      {expired && step === "email" && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Your password has expired (older than 90 days). Please reset it to continue.
+        </p>
+      )}
 
       {step === "email" ? (
         <form
