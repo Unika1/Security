@@ -7,6 +7,7 @@ import { validate, tourSchema } from "../lib/validation.js";
 import { requireCsrf } from "../middleware/csrf.js";
 import { requireAuth, requireAdmin } from "../lib/auth.js";
 import { uploadImage, UPLOAD_DIR } from "../middleware/upload.js";
+import { logEvent } from "../lib/audit.js";
 
 const router = express.Router();
 
@@ -44,6 +45,7 @@ router.post("/", requireCsrf, requireAuth, requireAdmin, async (req, res) => {
     if (!check.ok) return res.status(400).json({ error: check.error });
 
     const tour = await Tour.create(check.data);
+    await logEvent(req, "tour_create", { userId: req.userId });
     return res.status(201).json({ tour });
   } catch (err) {
     console.error("Create tour error:", err);
@@ -94,6 +96,7 @@ router.put("/:id", requireCsrf, requireAuth, requireAdmin, async (req, res) => {
 
     tour.set(check.data);
     await tour.save();
+    await logEvent(req, "tour_update", { userId: req.userId });
     return res.json({ tour });
   } catch (err) {
     console.error("Update tour error:", err);
@@ -120,6 +123,7 @@ router.delete("/:id", requireCsrf, requireAuth, requireAdmin, async (req, res) =
       fs.unlink(path.join(UPLOAD_DIR, filename), () => {});
     }
 
+    await logEvent(req, "tour_delete", { userId: req.userId });
     return res.json({ ok: true });
   } catch (err) {
     console.error("Delete tour error:", err);
