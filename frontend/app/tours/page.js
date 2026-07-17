@@ -1,17 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getJson } from "@/lib/clientApi";
 
 export default function ToursPage() {
+  const router = useRouter();
   const [tours, setTours] = useState(null); // null = still loading
 
   useEffect(() => {
+    // Tours require login. If the API says 401, send the visitor to log in.
     getJson("/api/tours")
-      .then(({ data }) => setTours(data?.tours || []))
+      .then(({ ok, status, data }) => {
+        if (!ok && status === 401) {
+          router.replace("/login");
+          return;
+        }
+        setTours(data?.tours || []);
+      })
       .catch(() => setTours([]));
-  }, []);
+  }, [router]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -24,7 +33,7 @@ export default function ToursPage() {
         <p className="mt-8 text-stone-600">Loading tours…</p>
       ) : tours.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-stone-600">
-          No tours available yet — check back soon.
+          No tours available yet. Check back soon.
         </p>
       ) : (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

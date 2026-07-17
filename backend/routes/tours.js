@@ -11,8 +11,8 @@ import { logEvent } from "../lib/audit.js";
 
 const router = express.Router();
 
-// GET /api/tours -> list all tours (public — anyone can browse)
-router.get("/", async (req, res) => {
+// GET /api/tours -> list all tours (requires a logged-in user)
+router.get("/", requireAuth, async (req, res) => {
   try {
     const tours = await Tour.find().sort({ createdAt: -1 });
     return res.json({ tours });
@@ -22,8 +22,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/tours/:id -> one tour with all its details (public)
-router.get("/:id", async (req, res) => {
+// GET /api/tours/:id -> one tour with all its details (requires login)
+router.get("/:id", requireAuth, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({ error: "Invalid tour id." });

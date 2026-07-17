@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getJson, postJson, deleteJson } from "@/lib/clientApi";
 
 export default function TourDetailPage() {
   const { id } = useParams(); // the tour id from the URL (/tours/<id>)
+  const router = useRouter();
 
   const [tour, setTour] = useState(null);
   const [error, setError] = useState("");
@@ -18,9 +19,13 @@ export default function TourDetailPage() {
 
   useEffect(() => {
     async function load() {
-      // 1. the tour itself
+      // 1. the tour itself (requires login)
       const t = await getJson(`/api/tours/${id}`);
       if (!t.ok) {
+        if (t.status === 401) {
+          router.replace("/login");
+          return;
+        }
         setError(t.data?.error || "Tour not found.");
         setLoading(false);
         return;

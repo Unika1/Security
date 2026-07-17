@@ -61,7 +61,7 @@ function Dashboard({ user }) {
 }
 
 // ---------------------------------------------------------------------------
-// Landing page — shown when the user is NOT logged in
+// Landing page - shown when the user is NOT logged in
 // ---------------------------------------------------------------------------
 function LandingPage() {
   return (
@@ -98,24 +98,26 @@ function LandingPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-2xl font-bold text-stone-900">Featured Tours</h2>
-        <p className="mt-2 text-stone-600">
-          Featured tour cards will appear here once the tour data and discovery
-          pages are built.
+        <h2 className="text-2xl font-bold text-stone-900">
+          Sign in to explore tours
+        </h2>
+        <p className="mt-2 max-w-xl text-stone-600">
+          Create a free account to browse cultural and heritage tours across
+          Nepal, view full details, and save your favourites for later.
         </p>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {["Kathmandu Heritage", "Bhaktapur Heritage", "Patan Cultural"].map(
-            (name) => (
-              <div
-                key={name}
-                className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
-              >
-                <div className="mb-4 h-32 rounded-xl bg-brand-light" />
-                <h3 className="font-semibold text-stone-900">{name} Tour</h3>
-                <p className="mt-1 text-sm text-stone-500">Coming soon</p>
-              </div>
-            )
-          )}
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/register"
+            className="rounded-full bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark"
+          >
+            Create account
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-full border border-stone-300 px-6 py-3 font-semibold text-stone-700 transition hover:bg-stone-100"
+          >
+            Log in
+          </Link>
         </div>
       </section>
     </div>
