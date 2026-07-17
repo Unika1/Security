@@ -9,10 +9,13 @@ import rateLimit from "express-rate-limit";
   credential-stuffing and brute-force attacks.
 */
 
-// Tight limit for the sensitive auth actions (login, OTP, password reset).
+// Limit for the sensitive auth actions (login, OTP, password reset).
+// This is a per-IP safety net against automated flooding. It is deliberately
+// generous so normal use (and testing) is never blocked; the per-account
+// lockout in the login route is the tighter, targeted brute-force defence.
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per IP per window
+  max: 50, // up to 50 requests per IP per window
   standardHeaders: true, // send RateLimit-* headers so clients can see limits
   legacyHeaders: false,
   message: { error: "Too many attempts. Please wait a few minutes and try again." },

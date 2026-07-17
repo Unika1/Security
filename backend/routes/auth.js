@@ -23,8 +23,8 @@ const MAX_OTP_ATTEMPTS = 5;
 const OTP_MINUTES = 5; // how long a code stays valid
 const RESEND_COOLDOWN_SECONDS = 30; // minimum wait between two codes
 const PASSWORD_EXPIRY_DAYS = 90; // force a change after this many days
-const MAX_FAILED_LOGINS = 5; // lock the account after this many wrong passwords
-const LOCK_MINUTES = 15; // how long the account stays locked
+const MAX_FAILED_LOGINS = 8; // lock the account after this many wrong passwords
+const LOCK_MINUTES = 5; // how long the account stays locked
 const MAX_PREVIOUS_PASSWORDS = 5; // how many old passwords we remember
 
 // Generate a fresh 6-digit code for this user, save its hash, and email it.
