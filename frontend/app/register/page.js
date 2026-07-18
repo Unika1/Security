@@ -43,7 +43,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // Success — send them to the login page to sign in with their new
+      // Success. Send them to the login page to sign in with their new
       // account. The ?registered=1 flag lets the login page show a message.
       router.push("/login?registered=1");
     } catch {

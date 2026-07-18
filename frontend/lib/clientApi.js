@@ -2,9 +2,9 @@
 
 import { CSRF_COOKIE, CSRF_HEADER } from "./csrf";
 
-// The frontend calls its OWN address (same origin). Next.js forwards /api/*
-// to the Express backend (see next.config.mjs "rewrites"). So we use plain
-// relative paths like "/api/auth/login" — no hostname needed.
+// The frontend calls its own address. Next.js forwards /api/* to the
+// Express backend (see the rewrites in next.config.mjs), so we can use
+// simple paths like "/api/auth/login" with no hostname.
 const API_URL = "";
 
 // Read a cookie value by name from the browser's document.cookie string.
@@ -15,12 +15,9 @@ function readCookie(name) {
   return match ? decodeURIComponent(match.split("=")[1]) : null;
 }
 
-/*
-  postJson — send JSON to the backend.
-  - credentials: "include" sends/receives the login + CSRF cookies.
-  - We attach the CSRF token (read from the cookie) in the x-csrf-token header.
-  Returns { ok, status, data }.
-*/
+// Send JSON to the backend with a POST request.
+// credentials: "include" sends the login and CSRF cookies.
+// We read the CSRF token from the cookie and send it in a header.
 export async function postJson(path, body) {
   const csrfToken = readCookie(CSRF_COOKIE) || "";
 
@@ -43,8 +40,8 @@ export async function postJson(path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// putJson — update something on the backend. Same shape as postJson,
-// just the PUT method (the convention for "replace/update this thing").
+// Update something on the backend with a PUT request. Same as postJson
+// but uses PUT, which is the usual method for updating an item.
 export async function putJson(path, body) {
   const csrfToken = readCookie(CSRF_COOKIE) || "";
 
@@ -67,8 +64,8 @@ export async function putJson(path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// postFile — upload a file (as FormData). We set the CSRF header but NOT a
-// Content-Type: the browser adds the correct multipart type by itself.
+// Upload a file using FormData. We send the CSRF header but not a
+// Content-Type, because the browser sets the right one for us.
 export async function postFile(path, formData) {
   const csrfToken = readCookie(CSRF_COOKIE) || "";
 
@@ -88,8 +85,8 @@ export async function postFile(path, formData) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// deleteJson — ask the backend to delete something. Like postJson, this is a
-// state-changing request, so it must carry the CSRF token too.
+// Ask the backend to delete something. This changes data so it also
+// needs the CSRF token, like postJson.
 export async function deleteJson(path) {
   const csrfToken = readCookie(CSRF_COOKIE) || "";
 
@@ -108,7 +105,7 @@ export async function deleteJson(path) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// getJson — read data from the backend (e.g. the current user).
+// Read data from the backend, for example the current user.
 export async function getJson(path) {
   const res = await fetch(`${API_URL}${path}`, { credentials: "include" });
   let data = null;

@@ -34,7 +34,7 @@ export default function SavedPage() {
         <p className="mt-8 text-stone-600">Loading…</p>
       ) : tours.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-stone-600">
-          Nothing saved yet — find something you like on the{" "}
+          Nothing saved yet. Find something you like on the{" "}
           <Link href="/tours" className="font-semibold text-brand hover:underline">
             Tours page
           </Link>

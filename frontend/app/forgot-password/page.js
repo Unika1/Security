@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
         setError(data?.error || "Could not reset the password.");
         return;
       }
-      // Done — send them to log in with the new password.
+      // Done. Send them to log in with the new password.
       router.push("/login?reset=1");
     } catch {
       setError("Could not reach the server. Is it running?");

@@ -205,7 +205,7 @@ export default function AdminPage() {
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-bold text-stone-900">Admin dashboard</h1>
       <p className="mt-2 text-stone-600">
-        Add new tours here — they appear on the Tours page right away.
+        Add new tours here. They appear on the Tours page right away.
       </p>
 
       <form
@@ -215,7 +215,7 @@ export default function AdminPage() {
       >
         {editingId && (
           <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-brand">
-            Editing "{title}" — change the fields below and press Save changes.
+            Editing "{title}". Change the fields below and press Save changes.
           </p>
         )}
         <div>
@@ -353,7 +353,7 @@ export default function AdminPage() {
                   className="h-32 w-full rounded-lg object-cover"
                 />
                 <p className="mt-1 text-xs text-stone-500">
-                  Current picture — choose a file above to replace it.
+                  Current picture. Choose a file above to replace it.
                 </p>
               </div>
             )
@@ -393,7 +393,7 @@ export default function AdminPage() {
       </h2>
 
       {tours.length === 0 ? (
-        <p className="mt-3 text-stone-600">No tours yet — add the first one above.</p>
+        <p className="mt-3 text-stone-600">No tours yet. Add the first one above.</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {tours.map((tour) => (
@@ -469,8 +469,8 @@ export default function AdminPage() {
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                   <td className="px-3 py-2 font-medium text-stone-900">{log.action}</td>
-                  <td className="px-3 py-2 text-stone-600">{log.email || "—"}</td>
-                  <td className="px-3 py-2 text-stone-500">{log.ip || "—"}</td>
+                  <td className="px-3 py-2 text-stone-600">{log.email || "-"}</td>
+                  <td className="px-3 py-2 text-stone-500">{log.ip || "-"}</td>
                 </tr>
               ))}
             </tbody>

@@ -26,7 +26,7 @@ export default function HomePage() {
 }
 
 // ---------------------------------------------------------------------------
-// Dashboard — shown when the user IS logged in
+// Dashboard, shown when the user IS logged in
 // ---------------------------------------------------------------------------
 function Dashboard({ user }) {
   const cards = [

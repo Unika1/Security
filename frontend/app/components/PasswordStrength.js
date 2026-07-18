@@ -1,14 +1,10 @@
 "use client";
 
-/*
-  A live password-strength meter shown under the password box.
+// A live password strength bar shown under the password box.
+// It checks the same rules as the server so the user gets instant feedback.
+// This is only to help the user. The server still does the real check.
 
-  It checks the same rules the server enforces (length + character types) and
-  gives the user real-time feedback. This is a usability aid only — the server
-  is still the real gatekeeper (it rejects weak passwords with 400).
-*/
-
-// Each rule: a label and a test function.
+// Each rule has a label and a test function.
 const RULES = [
   { label: "At least 8 characters", test: (p) => p.length >= 8 },
   { label: "A lowercase letter", test: (p) => /[a-z]/.test(p) },

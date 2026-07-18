@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 
-/*
-  A password input with a Show/Hide toggle. Flipping the input's type between
-  "password" (dots) and "text" (readable) is all the toggle does — the value
-  never leaves the field.
-*/
+// A password box with a Show/Hide button.
+// The button just switches the input type between password (dots) and text.
 export default function PasswordField({
   id,
   label,

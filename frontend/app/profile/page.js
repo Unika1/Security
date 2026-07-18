@@ -43,7 +43,7 @@ export default function ProfilePage() {
         setPhoneErr(data?.error || "Could not save.");
         return;
       }
-      setPhoneMsg("Saved. Your phone number is stored encrypted.");
+      setPhoneMsg("Phone number saved.");
     } catch {
       setPhoneErr("Could not reach the server.");
     } finally {
@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
   const isAdmin = user.role === "admin";
 
-  // "July 2026" — a friendly version of the account creation date.
+  // A friendly version of the account creation date, like "July 2026".
   const memberSince = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString("en-US", {
         month: "long",
@@ -111,11 +111,10 @@ export default function ProfilePage() {
             )}
           </dl>
 
-          {/* Editable phone number — stored AES-encrypted on the server. */}
+          {/* Editable phone number. It is stored AES encrypted on the server. */}
           <form onSubmit={handleSavePhone} className="mt-5 border-t border-stone-100 pt-5">
             <label htmlFor="phone" className="block text-sm font-medium text-stone-700">
-              Phone number{" "}
-              <span className="font-normal text-stone-400">(stored encrypted, optional)</span>
+              Phone number
             </label>
             <div className="mt-1 flex gap-2">
               <input

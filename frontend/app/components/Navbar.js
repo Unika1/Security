@@ -69,7 +69,7 @@ export default function Navbar() {
             ))}
 
             {/* The Admin link only appears for admin accounts. (The server
-                still checks the role on every admin request — hiding the link
+                still checks the role on every admin request, so hiding the link
                 is just tidier, not the security.) */}
             {user?.role === "admin" && (
               <li>

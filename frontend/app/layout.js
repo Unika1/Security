@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: {
-    default: "CityMate — Nepal Cultural & Heritage Tour Guide",
+    default: "CityMate: Nepal Cultural & Heritage Tour Guide",
     template: "%s · CityMate",
   },
   description:
-    "Discover and plan cultural and heritage city tours across Nepal — Kathmandu, Bhaktapur, Patan, Pokhara, and Lumbini.",
+    "Discover and plan cultural and heritage city tours across Nepal: Kathmandu, Bhaktapur, Patan, Pokhara, and Lumbini.",
 };
 
 export default function RootLayout({ children }) {
