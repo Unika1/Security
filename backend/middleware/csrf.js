@@ -5,16 +5,12 @@ export const CSRF_HEADER = "x-csrf-token";
 
 const isProd = process.env.NODE_ENV === "production";
 
-/*
-  CSRF protection — "double-submit cookie" pattern.
-
-  1. issueCsrfToken: every response makes sure the browser has a random
-     csrf_token cookie. It is NOT httpOnly, so the frontend JavaScript can
-     read it and echo it back in a header.
-  2. requireCsrf: on state-changing requests (POST etc.) we check that the
-     x-csrf-token header matches the cookie. A malicious cross-site page can't
-     read our cookie, so it can't forge the header — the request is blocked.
-*/
+// CSRF protection using the double-submit cookie method.
+// issueCsrfToken gives the browser a random csrf_token cookie. It is not
+// httpOnly so our own JavaScript can read it and send it back in a header.
+// requireCsrf then checks the header matches the cookie on POST and similar
+// requests. Another website cannot read our cookie so it cannot fake the
+// header, and its request is blocked.
 
 export function issueCsrfToken(req, res, next) {
   if (!req.cookies?.[CSRF_COOKIE]) {

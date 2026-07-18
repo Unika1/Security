@@ -5,17 +5,17 @@ export const AUTH_COOKIE = "citymate_token";
 const TOKEN_DAYS = 7;
 const isProd = process.env.NODE_ENV === "production";
 
-// Create a signed login token from a user id.
+// Make a signed login token (JWT) for a user id.
 export function createToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: `${TOKEN_DAYS}d`,
   });
 }
 
-// Cookie options for the login token.
-//  - httpOnly: JavaScript can't read it (blocks token theft via XSS)
-//  - sameSite "lax": sent on same-site requests (works between localhost ports)
-//  - secure: HTTPS-only in production
+// Settings for the login cookie.
+// httpOnly means JavaScript cannot read it, which helps against XSS.
+// sameSite lax means it is not sent from other sites, which helps against CSRF.
+// secure means it is only sent over HTTPS in production.
 export function authCookieOptions() {
   return {
     httpOnly: true,
@@ -26,10 +26,8 @@ export function authCookieOptions() {
   };
 }
 
-/*
-  Middleware that requires a logged-in user. Reads the login cookie, verifies
-  the token, and attaches { userId } to req. Otherwise responds 401.
-*/
+// Check the user is logged in. Reads the cookie, checks the token,
+// and saves the user id on the request. If not, sends 401.
 export function requireAuth(req, res, next) {
   const token = req.cookies?.[AUTH_COOKIE];
   if (!token) return res.status(401).json({ error: "Not logged in." });
@@ -43,11 +41,8 @@ export function requireAuth(req, res, next) {
   }
 }
 
-/*
-  Middleware that requires an ADMIN user. Use it AFTER requireAuth (which sets
-  req.userId). We look the user up in the database each time instead of
-  trusting anything from the browser — the role can never be faked client-side.
-*/
+// Check the user is an admin. Use it after requireAuth.
+// We read the role from the database each time so the browser cannot fake it.
 export async function requireAdmin(req, res, next) {
   try {
     const user = await User.findById(req.userId).select("role");

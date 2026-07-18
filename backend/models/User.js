@@ -1,12 +1,8 @@
 import mongoose from "mongoose";
 
-/*
-  A "model" describes the shape of a document stored in MongoDB.
-  This User model is how every CityMate account is saved.
-
-  We never store the raw password — only a bcrypt hash in `passwordHash`.
-  The otp* fields support two-factor login (a 6-digit code).
-*/
+// This model is the shape of a user account in MongoDB.
+// We never save the real password, only its bcrypt hash.
+// The otp fields are used for the 6-digit two-factor login code.
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },

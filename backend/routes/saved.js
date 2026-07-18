@@ -7,11 +7,9 @@ import { requireAuth } from "../lib/auth.js";
 
 const router = express.Router();
 
-/*
-  Saved (bookmarked) tours. Every route needs a logged-in user, and each
-  user can only ever see or change their OWN list — the user id comes from
-  the verified login cookie (req.userId), never from the request body.
-*/
+// Saved (bookmarked) tours. Every route here needs the user to be logged in.
+// A user can only see or change their own list because we take the user id
+// from the login cookie (req.userId), not from the request body.
 
 // GET /api/saved -> the logged-in user's saved tours, newest first
 router.get("/", requireAuth, async (req, res) => {

@@ -1,12 +1,9 @@
 import nodemailer from "nodemailer";
 
-/*
-  Email sender for the 2FA one-time codes.
-
-  If no EMAIL_USER is set in .env, we automatically create a free "Ethereal"
-  test account. Ethereal doesn't really deliver mail — it gives a preview URL
-  we print in the terminal so you can SEE the code while testing.
-*/
+// Sends the email with the one-time code.
+// If no email account is set in .env we use a free Ethereal test account.
+// Ethereal does not really send mail, it just gives a preview link in the
+// terminal so you can see the code while testing.
 
 let cachedTransporter = null;
 

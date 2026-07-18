@@ -1,49 +1,60 @@
 import crypto from "crypto";
 
-/*
-  AES-256 encryption for personal data stored in the database.
-
-  Some user details (e.g. a phone number) are sensitive. If the database were
-  ever leaked, plaintext personal data would be exposed. We therefore encrypt
-  these fields at rest with AES-256-GCM and only decrypt them when the owner
-  reads their own profile.
-
-  The key comes from CRYPTO_SECRET in .env (never committed). A fresh random
-  IV is generated per value and stored alongside the ciphertext, so encrypting
-  the same value twice produces different output.
-*/
+// AES encryption for personal data like the phone number.
+// We store it encrypted so it is not readable if the database is stolen.
+// The secret key is kept in the .env file.
 
 const ALGO = "aes-256-gcm";
 
-// Derive a stable 32-byte key from the secret in the environment.
+// Build a 32 byte key from the secret in .env.
 function getKey() {
   const secret = process.env.CRYPTO_SECRET || "dev-only-crypto-secret-change-me";
   return crypto.createHash("sha256").update(secret).digest();
 }
 
-// Encrypt a string. Output format: "iv:authTag:ciphertext" (all hex).
+// Encrypt a string. The result looks like "iv:authTag:ciphertext".
 export function encrypt(plainText) {
   if (!plainText) return "";
+
+  // 1. Make a random IV. This makes the output different every time.
   const iv = crypto.randomBytes(12);
+
+  // 2. Create the cipher using our key and the IV.
   const cipher = crypto.createCipheriv(ALGO, getKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(String(plainText), "utf8"), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
+
+  // 3. Encrypt the text into hex.
+  let encrypted = cipher.update(String(plainText), "utf8", "hex");
+  encrypted = encrypted + cipher.final("hex");
+
+  // 4. Get the auth tag. It is used later to check the data was not changed.
+  const authTag = cipher.getAuthTag().toString("hex");
+
+  // 5. Join the three parts with ":" so we can split them again later.
+  return iv.toString("hex") + ":" + authTag + ":" + encrypted;
 }
 
-// Decrypt a value produced by encrypt(). Returns "" if it can't be decoded.
+// Turn an encrypted value back into normal text. Returns "" if it fails.
 export function decrypt(stored) {
   if (!stored) return "";
+
   try {
-    const [ivHex, tagHex, dataHex] = stored.split(":");
-    const decipher = crypto.createDecipheriv(ALGO, getKey(), Buffer.from(ivHex, "hex"));
-    decipher.setAuthTag(Buffer.from(tagHex, "hex"));
-    const decrypted = Buffer.concat([
-      decipher.update(Buffer.from(dataHex, "hex")),
-      decipher.final(),
-    ]);
-    return decrypted.toString("utf8");
+    // 1. Split the stored value back into its three parts.
+    const parts = stored.split(":");
+    const iv = Buffer.from(parts[0], "hex");
+    const authTag = Buffer.from(parts[1], "hex");
+    const encryptedText = parts[2];
+
+    // 2. Create the decipher using the same key and IV.
+    const decipher = crypto.createDecipheriv(ALGO, getKey(), iv);
+    decipher.setAuthTag(authTag);
+
+    // 3. Decrypt the text back to normal.
+    let decrypted = decipher.update(encryptedText, "hex", "utf8");
+    decrypted = decrypted + decipher.final("utf8");
+
+    return decrypted;
   } catch {
+    // If the data is broken or the key is wrong, just return empty.
     return "";
   }
 }

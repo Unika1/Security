@@ -1,13 +1,8 @@
 import rateLimit from "express-rate-limit";
 
-/*
-  Brute-force protection with rate limiting.
-
-  Repeated password guesses, OTP guesses or reset requests from the same IP
-  are throttled. Once the limit is hit, further requests get 429 (Too Many
-  Requests) until the time window passes — this defeats automated
-  credential-stuffing and brute-force attacks.
-*/
+// Rate limiting to slow down brute-force attacks.
+// If one IP sends too many login, OTP or reset requests in a short time,
+// the extra requests get a 429 error until the time window passes.
 
 // Limit for the sensitive auth actions (login, OTP, password reset).
 // This is a per-IP safety net against automated flooding. It is deliberately

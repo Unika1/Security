@@ -1,11 +1,8 @@
 import mongoose from "mongoose";
 
-/*
-  An audit trail: one record per security-relevant action (login, logout,
-  password reset, admin tour changes, etc.). It supports monitoring and
-  incident response. We deliberately store NO sensitive data — no passwords,
-  no OTP codes — only who did what, when, and from where.
-*/
+// One record for each security action like login, logout or password reset.
+// This is used to keep track of activity. We do not store passwords or
+// OTP codes here, only what happened, when, and from which IP.
 const auditLogSchema = new mongoose.Schema(
   {
     action: { type: String, required: true }, // e.g. "login_success"

@@ -1,18 +1,12 @@
 import { z } from "zod";
 import { CITIES } from "../models/Tour.js";
 
-/*
-  Input validation with zod. Never trust data from the browser — these schemas
-  describe exactly what we accept. Anything else is rejected before it reaches
-  the database (protects data integrity and helps prevent injection/XSS).
-*/
+// We use zod to check all data coming from the browser.
+// If the data does not match the rules below it is rejected before it
+// reaches the database. This helps stop bad input and injection attacks.
 
-/*
-  Password policy (shared by registration and password reset).
-  A strong password must be 8+ characters and mix character types so it can't
-  be guessed easily. Each rule has its own clear message so the user knows
-  exactly what is missing.
-*/
+// Password rules, used by both register and reset password.
+// A password needs 8+ characters with upper, lower, a number and a symbol.
 export const passwordPolicy = z
   .string()
   .min(8, "Password must be at least 8 characters.")
@@ -84,8 +78,8 @@ export const tourSchema = z.object({
     .max(10, "You can add at most 10 highlights.")
     .optional()
     .default([]),
-  // Either one of our own uploaded files or empty. (No arbitrary text —
-  // this value ends up in an <img src>.)
+  // Only allow our own uploaded image path or an empty string.
+  // This value is used in an image tag so we do not accept random text.
   imageUrl: z
     .string()
     .trim()

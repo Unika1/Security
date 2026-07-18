@@ -1,10 +1,8 @@
 import AuditLog from "../models/AuditLog.js";
 
-/*
-  Record one security event. Called from routes after notable actions.
-  Never throws into the request flow — if logging fails, we log to the console
-  but do not break the user's action.
-*/
+// Save one security event to the log. Called from the routes after
+// actions like login or password reset. If saving the log fails we just
+// print it to the console so the user's action is not affected.
 export async function logEvent(req, action, extra = {}) {
   try {
     await AuditLog.create({

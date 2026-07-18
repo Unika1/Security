@@ -16,45 +16,54 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:3000";
 
-// --- Security & parsing middleware (order matters) ---
+//Security and setup middleware
 
-// helmet sets safe HTTP headers (incl. a Content-Security-Policy, HSTS, etc.).
+// helmet adds safe HTTP headers like Content-Security-Policy and HSTS.
 app.use(helmet());
 
-// Allow our frontend to call this API (and send cookies). In development we
-// accept localhost, 127.0.0.1, and LAN IPs (192.168.x.x) on any port, so the
-// site works whether you open it via localhost or the network address.
-const devOriginPattern =
-  /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/;
+// Decide if a website is allowed to call this API.
+// We allow our own frontend, plus localhost and local IPs during development.
+function isAllowedOrigin(origin) {
+  // Requests with no origin (like tools or the Next.js server) are allowed.
+  if (!origin) return true;
 
+  // Our main frontend address is always allowed.
+  if (origin === CLIENT_ORIGIN) return true;
+
+  // In development also allow localhost, 127.0.0.1 and local network IPs.
+  const devPattern = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/;
+  return devPattern.test(origin);
+}
+
+// Turn on CORS using the check above.
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow non-browser tools (no origin) and any matching dev origin.
-      if (!origin || origin === CLIENT_ORIGIN || devOriginPattern.test(origin)) {
-        return callback(null, true);
+      if (isAllowedOrigin(origin)) {
+        callback(null, true); // allowed
+      } else {
+        callback(new Error("Not allowed by CORS")); // blocked
       }
-      return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true,
+    credentials: true, // let the browser send cookies
   })
 );
 
-app.use(express.json()); // parse JSON request bodies
-app.use(cookieParser()); // read cookies from requests
-app.use(issueCsrfToken); // make sure every visitor has a CSRF token cookie
+app.use(express.json()); // read JSON from the request body
+app.use(cookieParser()); // read cookies from the request
+app.use(issueCsrfToken); // give every visitor a CSRF token cookie
 
-// --- Routes ---
+// ---- Routes ----
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/saved", savedRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Serve uploaded tour pictures (the frontend shows them via /api/uploads/...).
+// Serve the uploaded tour pictures at /api/uploads/...
 app.use("/api/uploads", express.static(path.resolve("uploads")));
 
-// --- Start the server after connecting to the database ---
+// ---- Connect to the database, then start the server ----
 connectToDatabase()
   .then(() => {
     app.listen(PORT, () => {

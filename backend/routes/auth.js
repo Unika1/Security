@@ -96,7 +96,7 @@ router.post("/login", authLimiter, requireCsrf, async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    // Correct password — clear any failed-attempt counters.
+    // Correct password, so reset the failed attempt counters.
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
 
@@ -181,7 +181,7 @@ router.post("/verify-otp", authLimiter, requireCsrf, async (req, res) => {
       return res.status(401).json({ error: "Incorrect code. Please try again." });
     }
 
-    // Success — clear the one-time code and log in.
+    // Code is correct, so clear it and log the user in.
     user.otpHash = null;
     user.otpExpiresAt = null;
     user.otpAttempts = 0;
@@ -254,21 +254,29 @@ router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
     }
 
     // Password reuse prevention: the new password must not match the current
-    // one or any of the remembered previous passwords.
-    const oldHashes = [user.passwordHash, ...(user.previousPasswords || [])];
-    for (const h of oldHashes) {
-      if (await bcrypt.compare(password, h)) {
+    // password or any old password we saved.
+    // First make a list of all the old password hashes.
+    const oldHashes = [user.passwordHash];
+    for (const oldOne of user.previousPasswords || []) {
+      oldHashes.push(oldOne);
+    }
+    // Then check the new password against each of them.
+    for (const hash of oldHashes) {
+      const isSame = await bcrypt.compare(password, hash);
+      if (isSame) {
         return res.status(400).json({ error: "You cannot reuse a previous password." });
       }
     }
 
-    // Success — remember the old password, store the new one, refresh dates,
+    // Code is correct. Remember the old password, save the new one, refresh dates,
     // clear all one-time codes, and unlock the account.
     const newHash = await bcrypt.hash(password, 10);
-    user.previousPasswords = [user.passwordHash, ...(user.previousPasswords || [])].slice(
-      0,
-      MAX_PREVIOUS_PASSWORDS
-    );
+
+    // Add the current password to the front of the old-passwords list,
+    // then keep only the newest few.
+    user.previousPasswords.unshift(user.passwordHash);
+    user.previousPasswords = user.previousPasswords.slice(0, MAX_PREVIOUS_PASSWORDS);
+
     user.passwordHash = newHash;
     user.passwordChangedAt = new Date();
     user.failedLoginAttempts = 0;

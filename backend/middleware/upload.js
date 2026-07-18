@@ -3,16 +3,11 @@ import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 
-/*
-  Image upload handling (used by the admin dashboard for tour pictures).
-
-  Security rules applied here:
-  - Only real image types are accepted (JPG, PNG, WebP) — checked by MIME type.
-  - Maximum size 2 MB, so nobody can fill the disk.
-  - We NEVER use the uploaded filename. Files get a random name plus an
-    extension from OUR list, which blocks tricks like "photo.jpg.exe" or
-    path characters in the name.
-*/
+// Handles tour image uploads from the admin dashboard.
+// Rules:
+// only JPG, PNG or WebP files are allowed (checked by MIME type),
+// the max size is 2 MB, and we give each file a random name so a
+// bad filename like "photo.jpg.exe" cannot cause problems.
 
 export const UPLOAD_DIR = path.resolve("uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
@@ -27,7 +22,10 @@ const ALLOWED_TYPES = {
 const storage = multer.diskStorage({
   destination: UPLOAD_DIR,
   filename(req, file, cb) {
-    cb(null, crypto.randomUUID() + ALLOWED_TYPES[file.mimetype]);
+    // Build a safe file name: a random id plus the correct extension.
+    const randomName = crypto.randomUUID();
+    const extension = ALLOWED_TYPES[file.mimetype];
+    cb(null, randomName + extension);
   },
 });
 
