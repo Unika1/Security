@@ -18,6 +18,7 @@ import { sendOtpEmail, sendResetEmail } from "../utils/mailer.js";
 import { logEvent } from "../lib/audit.js";
 import { encrypt, decrypt } from "../lib/crypto.js";
 import { isPasswordBreached } from "../lib/breachCheck.js";
+import { makeCaptcha, verifyCaptcha } from "../lib/captcha.js";
 
 const router = express.Router();
 const MAX_OTP_ATTEMPTS = 5;
@@ -39,9 +40,19 @@ async function issueOtp(user) {
   await sendOtpEmail(user.email, code);
 }
 
+// GET /api/auth/captcha -> a fresh CAPTCHA image and its token
+router.get("/captcha", (req, res) => {
+  return res.json(makeCaptcha());
+});
+
 // POST /api/auth/register -> create an account (does NOT log in)
 router.post("/register", registerLimiter, requireCsrf, async (req, res) => {
   try {
+    // CAPTCHA check first, to block automated bots.
+    if (!verifyCaptcha(req.body?.captchaToken, req.body?.captchaAnswer)) {
+      return res.status(400).json({ error: "Incorrect CAPTCHA. Please try again." });
+    }
+
     const check = validate(registerSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
     const { name, email, password } = check.data;
@@ -86,7 +97,8 @@ router.post("/login", authLimiter, requireCsrf, async (req, res) => {
       });
     }
 
-    const passwordOk = user ? await bcrypt.compare(password, user.passwordHash) : false;
+    const passwordOk =
+      user && user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
     // Same error for unknown email and wrong password (don't reveal which).
     if (!user || !passwordOk) {
       // Count the failed attempt against the account and lock if over the limit.

@@ -13,7 +13,12 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    passwordHash: { type: String, required: true },
+    // Not required: users who sign in with Google have no password.
+    passwordHash: { type: String, default: null },
+
+    // How the account signs in: "local" (email + password) or "google".
+    provider: { type: String, enum: ["local", "google"], default: "local" },
+    googleId: { type: String, default: null },
 
     // Password policy support:
     //  - previousPasswords: hashes of old passwords, so they can't be reused
