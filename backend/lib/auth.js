@@ -1,13 +1,21 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/User.js";
 
 export const AUTH_COOKIE = "citymate_token";
 const TOKEN_DAYS = 7;
 const isProd = process.env.NODE_ENV === "production";
 
-// Make a signed login token (JWT) for a user id.
-export function createToken(userId) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+// Make a short fingerprint of the device from its browser user-agent.
+// We store this in the token so the session is tied to one device.
+export function deviceId(req) {
+  const ua = req.get?.("user-agent") || "";
+  return crypto.createHash("sha256").update(ua).digest("hex").slice(0, 16);
+}
+
+// Make a signed login token (JWT) for a user id, tied to their device.
+export function createToken(userId, device) {
+  return jwt.sign({ userId, device }, process.env.JWT_SECRET, {
     expiresIn: `${TOKEN_DAYS}d`,
   });
 }
@@ -34,6 +42,14 @@ export function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Session binding: the token must be used from the same device it was
+    // issued to. If the device fingerprint does not match, reject it. This
+    // means a stolen cookie cannot be reused from another browser.
+    if (payload.device && payload.device !== deviceId(req)) {
+      return res.status(401).json({ error: "Session not valid for this device. Please log in again." });
+    }
+
     req.userId = payload.userId;
     next();
   } catch {

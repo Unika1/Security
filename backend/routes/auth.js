@@ -13,10 +13,11 @@ import {
 } from "../lib/validation.js";
 import { requireCsrf } from "../middleware/csrf.js";
 import { authLimiter, registerLimiter } from "../middleware/rateLimit.js";
-import { createToken, authCookieOptions, AUTH_COOKIE, requireAuth } from "../lib/auth.js";
+import { createToken, authCookieOptions, AUTH_COOKIE, requireAuth, deviceId } from "../lib/auth.js";
 import { sendOtpEmail, sendResetEmail } from "../utils/mailer.js";
 import { logEvent } from "../lib/audit.js";
 import { encrypt, decrypt } from "../lib/crypto.js";
+import { isPasswordBreached } from "../lib/breachCheck.js";
 
 const router = express.Router();
 const MAX_OTP_ATTEMPTS = 5;
@@ -44,6 +45,13 @@ router.post("/register", registerLimiter, requireCsrf, async (req, res) => {
     const check = validate(registerSchema, req.body);
     if (!check.ok) return res.status(400).json({ error: check.error });
     const { name, email, password } = check.data;
+
+    // Reject passwords that appear in known data breaches.
+    if (await isPasswordBreached(password)) {
+      return res.status(400).json({
+        error: "This password has appeared in a known data breach. Please choose a different one.",
+      });
+    }
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -187,7 +195,8 @@ router.post("/verify-otp", authLimiter, requireCsrf, async (req, res) => {
     user.otpAttempts = 0;
     await user.save();
 
-    const token = createToken(user._id.toString());
+    // Bind the session to this device (see deviceId in lib/auth.js).
+    const token = createToken(user._id.toString(), deviceId(req));
     res.cookie(AUTH_COOKIE, token, authCookieOptions());
     await logEvent(req, "login_success", { email, userId: user._id });
     return res.json({
@@ -251,6 +260,13 @@ router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
       user.resetAttempts += 1;
       await user.save();
       return res.status(401).json({ error: "Incorrect code. Please try again." });
+    }
+
+    // Reject passwords that appear in known data breaches.
+    if (await isPasswordBreached(password)) {
+      return res.status(400).json({
+        error: "This password has appeared in a known data breach. Please choose a different one.",
+      });
     }
 
     // Password reuse prevention: the new password must not match the current
