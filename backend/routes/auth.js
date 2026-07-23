@@ -102,13 +102,25 @@ router.post("/login", authLimiter, requireCsrf, async (req, res) => {
     // Same error for unknown email and wrong password (don't reveal which).
     if (!user || !passwordOk) {
       // Count the failed attempt against the account and lock if over the limit.
+      // We use an atomic $inc so it stays correct even if many wrong-password
+      // requests arrive at the same time (as in a real brute-force attack).
       if (user) {
-        user.failedLoginAttempts += 1;
-        if (user.failedLoginAttempts >= MAX_FAILED_LOGINS) {
-          user.lockUntil = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
-          user.failedLoginAttempts = 0;
+        const updated = await User.findByIdAndUpdate(
+          user._id,
+          { $inc: { failedLoginAttempts: 1 } },
+          { new: true }
+        );
+        if (updated.failedLoginAttempts >= MAX_FAILED_LOGINS) {
+          await User.updateOne(
+            { _id: user._id },
+            {
+              $set: {
+                lockUntil: new Date(Date.now() + LOCK_MINUTES * 60 * 1000),
+                failedLoginAttempts: 0,
+              },
+            }
+          );
         }
-        await user.save();
         await logEvent(req, "login_failed", { email, userId: user._id });
       } else {
         await logEvent(req, "login_failed", { email });
