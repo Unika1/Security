@@ -6,8 +6,11 @@ export const AUTH_COOKIE = "citymate_token";
 const TOKEN_DAYS = 7;
 const isProd = process.env.NODE_ENV === "production";
 
-// Make a short fingerprint of the device from its browser user-agent.
-// We store this in the token so the session is tied to one device.
+// Device-bound sessions (advanced control).
+// A short fingerprint of the device is made from its browser user-agent and
+// stored inside the login token, so the session is tied to that one device.
+// requireAuth (below) then rejects the token if it is presented from a
+// different device, meaning a stolen cookie cannot be reused elsewhere.
 export function deviceId(req) {
   const ua = req.get?.("user-agent") || "";
   return crypto.createHash("sha256").update(ua).digest("hex").slice(0, 16);
@@ -58,7 +61,7 @@ export function requireAuth(req, res, next) {
 }
 
 // Check the user is an admin. Use it after requireAuth.
-// We read the role from the database each time so the browser cannot fake it.
+// read the role from the database each time so the browser cannot fake it.
 export async function requireAdmin(req, res, next) {
   try {
     const user = await User.findById(req.userId).select("role");
