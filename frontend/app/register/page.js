@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { postJson } from "@/lib/clientApi";
+import { postJson, getJson } from "@/lib/clientApi";
 import PasswordField from "../components/PasswordField";
 import PasswordStrength from "../components/PasswordStrength";
 
@@ -17,7 +17,24 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Send the new account details to our register API. On success the server
+  // CAPTCHA: the image, the token that goes with it, and the user's answer.
+  const [captchaImage, setCaptchaImage] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+
+  // Load a fresh CAPTCHA (on first render, and when a new one is needed).
+  async function loadCaptcha() {
+    const { data } = await getJson("/api/auth/captcha");
+    setCaptchaImage(data?.image || "");
+    setCaptchaToken(data?.token || "");
+    setCaptchaAnswer("");
+  }
+
+  useEffect(() => {
+    loadCaptcha();
+  }, []);
+
+  // Send the new account details to the register API. On success the server
   // hashes the password, saves the user, and logs them in automatically.
   async function handleSubmit(event) {
     event.preventDefault();
@@ -36,10 +53,13 @@ export default function RegisterPage() {
         name,
         email,
         password,
+        captchaToken,
+        captchaAnswer,
       });
 
       if (!ok) {
         setError(data?.error || "Registration failed.");
+        loadCaptcha(); // give a fresh CAPTCHA after any failure
         return;
       }
 
@@ -119,6 +139,39 @@ export default function RegisterPage() {
           placeholder="Type the same password again"
           minLength={8}
         />
+
+        {/* CAPTCHA: type the characters shown in the image. */}
+        <div>
+          <label htmlFor="captcha" className="block text-sm font-medium text-stone-700">
+            Type the characters below
+          </label>
+          <div className="mt-1 flex items-center gap-3">
+            {captchaImage && (
+              // The image is a data URI from the app's own server (no outside service).
+              <img
+                src={captchaImage}
+                alt="CAPTCHA"
+                className="h-12 rounded-lg border border-stone-300 bg-white"
+              />
+            )}
+            <button
+              type="button"
+              onClick={loadCaptcha}
+              className="text-sm font-medium text-brand hover:underline"
+            >
+              New image
+            </button>
+          </div>
+          <input
+            id="captcha"
+            type="text"
+            required
+            value={captchaAnswer}
+            onChange={(e) => setCaptchaAnswer(e.target.value)}
+            placeholder="Enter the characters"
+            className="mt-2 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          />
+        </div>
 
         <button
           type="submit"

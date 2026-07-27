@@ -27,7 +27,7 @@ const RESEND_COOLDOWN_SECONDS = 30; // minimum wait between two codes
 const PASSWORD_EXPIRY_DAYS = 90; // force a change after this many days
 const MAX_FAILED_LOGINS = 8; // lock the account after this many wrong passwords
 const LOCK_MINUTES = 5; // how long the account stays locked
-const MAX_PREVIOUS_PASSWORDS = 5; // how many old passwords we remember
+const MAX_PREVIOUS_PASSWORDS = 5; // how many old passwords are remembered
 
 // Generate a fresh 6-digit code for this user, save its hash, and email it.
 // Used by both login (first code) and resend-otp (replacement code).
@@ -102,7 +102,7 @@ router.post("/login", authLimiter, requireCsrf, async (req, res) => {
     // Same error for unknown email and wrong password (don't reveal which).
     if (!user || !passwordOk) {
       // Count the failed attempt against the account and lock if over the limit.
-      // We use an atomic $inc so it stays correct even if many wrong-password
+      // An atomic $inc is used so it stays correct even if many wrong-password
       // requests arrive at the same time (as in a real brute-force attack).
       if (user) {
         const updated = await User.findByIdAndUpdate(
@@ -132,7 +132,13 @@ router.post("/login", authLimiter, requireCsrf, async (req, res) => {
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
 
-    // Password expiry: force a reset if the password is older than the limit.
+    // Password expiry (advanced control).
+    // A password that has been in use for a very long time is more likely to
+    // have leaked at some point, so CityMate does not let one be used forever.
+    // The password's age in days is worked out from the date it was last set
+    // (passwordChangedAt). If that is older than PASSWORD_EXPIRY_DAYS (90 days)
+    // the login is stopped here and the user is sent to reset their password instead
+    // of issuing a session.
     const ageDays = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
     if (ageDays > PASSWORD_EXPIRY_DAYS) {
       await user.save();
@@ -166,8 +172,8 @@ router.post("/resend-otp", requireCsrf, async (req, res) => {
       return res.status(400).json({ error: "No login in progress. Please log in again." });
     }
 
-    // Cooldown: a code is issued OTP_MINUTES before it expires, so we can
-    // work out when the last one was sent without storing an extra field.
+    // Cooldown: a code is issued OTP_MINUTES before it expires, so the time
+    // the last one was sent can be worked out without storing an extra field.
     const issuedAt = user.otpExpiresAt.getTime() - OTP_MINUTES * 60 * 1000;
     const secondsSinceLast = (Date.now() - issuedAt) / 1000;
     if (secondsSinceLast < RESEND_COOLDOWN_SECONDS) {
@@ -294,7 +300,7 @@ router.post("/reset-password", authLimiter, requireCsrf, async (req, res) => {
     }
 
     // Password reuse prevention: the new password must not match the current
-    // password or any old password we saved.
+    // password or any old password that was saved.
     // First make a list of all the old password hashes.
     const oldHashes = [user.passwordHash];
     for (const oldOne of user.previousPasswords || []) {
@@ -346,7 +352,7 @@ router.post("/logout", requireCsrf, async (req, res) => {
 
 // GET /api/auth/me -> return the logged-in user (or null)
 router.get("/me", async (req, res) => {
-  // We don't use requireAuth here because "not logged in" is a normal answer.
+  // requireAuth is not used here because "not logged in" is a normal answer.
   try {
     const token = req.cookies?.[AUTH_COOKIE];
     if (!token) return res.json({ user: null });
@@ -379,7 +385,7 @@ router.get("/me", async (req, res) => {
 });
 
 // PUT /api/auth/profile -> update the logged-in user's profile (phone number).
-// The phone is stored AES-encrypted; we never keep it in plaintext at rest.
+// The phone is stored AES-encrypted; it is never kept in plaintext at rest.
 router.put("/profile", requireCsrf, requireAuth, async (req, res) => {
   try {
     const phone = String(req.body?.phone ?? "").trim();
