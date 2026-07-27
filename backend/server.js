@@ -23,12 +23,12 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:3000";
 app.use(helmet());
 
 // Decide if a website is allowed to call this API.
-// We allow our own frontend, plus localhost and local IPs during development.
+// The app's own frontend is allowed, plus localhost and local IPs during development.
 function isAllowedOrigin(origin) {
   // Requests with no origin (like tools or the Next.js server) are allowed.
   if (!origin) return true;
 
-  // Our main frontend address is always allowed.
+  // The main frontend address is always allowed.
   if (origin === CLIENT_ORIGIN) return true;
 
   // In development also allow localhost, 127.0.0.1 and local network IPs.

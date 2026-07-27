@@ -3,7 +3,7 @@
 import { CSRF_COOKIE, CSRF_HEADER } from "./csrf";
 
 // The frontend calls its own address. Next.js forwards /api/* to the
-// Express backend (see the rewrites in next.config.mjs), so we can use
+// Express backend (see the rewrites in next.config.mjs), so it can use
 // simple paths like "/api/auth/login" with no hostname.
 const API_URL = "";
 
@@ -17,7 +17,7 @@ function readCookie(name) {
 
 // Send JSON to the backend with a POST request.
 // credentials: "include" sends the login and CSRF cookies.
-// We read the CSRF token from the cookie and send it in a header.
+// The CSRF token is read from the cookie and sent in a header.
 export async function postJson(path, body) {
   const csrfToken = readCookie(CSRF_COOKIE) || "";
 
@@ -64,8 +64,8 @@ export async function putJson(path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// Upload a file using FormData. We send the CSRF header but not a
-// Content-Type, because the browser sets the right one for us.
+// Upload a file using FormData. The CSRF header is sent but not a
+// Content-Type, because the browser sets the right one automatically.
 export async function postFile(path, formData) {
   const csrfToken = readCookie(CSRF_COOKIE) || "";
 

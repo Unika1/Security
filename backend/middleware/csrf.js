@@ -7,9 +7,9 @@ const isProd = process.env.NODE_ENV === "production";
 
 // CSRF protection using the double-submit cookie method.
 // issueCsrfToken gives the browser a random csrf_token cookie. It is not
-// httpOnly so our own JavaScript can read it and send it back in a header.
+// httpOnly so the app's own JavaScript can read it and send it back in a header.
 // requireCsrf then checks the header matches the cookie on POST and similar
-// requests. Another website cannot read our cookie so it cannot fake the
+// requests. Another website cannot read this cookie so it cannot fake the
 // header, and its request is blocked.
 
 export function issueCsrfToken(req, res, next) {

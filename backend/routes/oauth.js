@@ -4,26 +4,23 @@ import User from "../models/User.js";
 import { createToken, authCookieOptions, AUTH_COOKIE, deviceId } from "../lib/auth.js";
 import { logEvent } from "../lib/audit.js";
 
-/*
-  "Sign in with Google" using OAuth 2.0.
+// OAuth is a standard login method that lets an app sign in a user through Google.
+// The flow is: send the browser to Google, receive a temporary code, exchange it for an access token,
+// use the access token to read the Google profile, and create or reuse the local account.
+// "Sign in with Google" using OAuth 2.0.
 
-  Flow:
-  1. The user clicks the Google button, which sends them to /api/auth/google.
-  2. We redirect them to Google's sign-in page.
-  3. Google sends them back to /callback with a one-time code.
-  4. We swap that code for the user's Google profile (email + name).
-  5. We find or create the account, then issue our own login cookie.
-
-  A random "state" value is used to protect the flow against CSRF.
-*/
-
+// Flow:
+// 1. The browser is sent to /api/auth/google.
+// 2. The browser is redirected to Google's sign-in page.
+// 3. Google redirects the browser back to /callback with a one-time code.
+// 4. The authorization code is exchanged for the user's Google profile (email and name).
+// 5. The account is found or created, and a local session cookie is issued.
+// A random state value is used to protect the flow against CSRF attacks.
 const router = express.Router();
-
 // This must match the redirect URI registered in Google Cloud Console.
 const REDIRECT_URI = "http://localhost:5000/api/auth/google/callback";
 // Where to send the user after login (the frontend).
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://localhost:3000";
-
 // GET /api/auth/google -> send the user to Google to sign in.
 router.get("/", (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
@@ -33,7 +30,6 @@ router.get("/", (req, res) => {
     maxAge: 10 * 60 * 1000,
     path: "/",
   });
-
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
@@ -50,7 +46,7 @@ router.get("/callback", async (req, res) => {
   try {
     const { code, state } = req.query;
 
-    // Check the state matches the one we set (CSRF protection).
+    // Check the state matches the one that was set (CSRF protection).
     if (!state || state !== req.cookies?.oauth_state) {
       return res.redirect(FRONTEND_URL + "/login?error=oauth");
     }
@@ -93,7 +89,7 @@ router.get("/callback", async (req, res) => {
       await logEvent(req, "register_google", { email, userId: user._id });
     }
 
-    // Issue our own device-bound login cookie and go to the app.
+    // Issue the app's device-bound login cookie and go to the app.
     const token = createToken(user._id.toString(), deviceId(req));
     res.cookie(AUTH_COOKIE, token, authCookieOptions());
     await logEvent(req, "login_google", { email, userId: user._id });

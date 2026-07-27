@@ -1,9 +1,12 @@
 import { z } from "zod";
 import { CITIES } from "../models/Tour.js";
 
-// We use zod to check all data coming from the browser.
-// If the data does not match the rules below it is rejected before it
-// reaches the database. This helps stop bad input and injection attacks.
+// Input validation with zod (advanced control).
+// Every value coming from the browser is checked against a schema before it
+// reaches the database. Because each field must match an exact type, a request
+// that tries to smuggle in a MongoDB operator (for example {"email": {"$gt": ""}})
+// does not match the "string" rule and is rejected, which stops NoSQL injection.
+// Bad, missing or oversized input is refused in the same way.
 
 // Password rules, used by both register and reset password.
 // A password needs 8+ characters with upper, lower, a number and a symbol.
@@ -78,8 +81,8 @@ export const tourSchema = z.object({
     .max(10, "You can add at most 10 highlights.")
     .optional()
     .default([]),
-  // Only allow our own uploaded image path or an empty string.
-  // This value is used in an image tag so we do not accept random text.
+  // Only allow an uploaded image path from this app or an empty string.
+  // This value is used in an image tag so random text is not accepted.
   imageUrl: z
     .string()
     .trim()

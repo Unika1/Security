@@ -19,7 +19,7 @@ export const authLimiter = rateLimit({
 // Gentler limit for account creation.
 export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 new accounts per IP per hour
+  max: 20, // up to 20 new accounts per IP per hour
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many accounts created from here. Please try again later." },

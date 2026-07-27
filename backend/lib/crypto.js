@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 // AES encryption for personal data like the phone number.
-// We store it encrypted so it is not readable if the database is stolen.
+// It is stored encrypted so it is not readable if the database is stolen.
 // The secret key is kept in the .env file.
 
 const ALGO = "aes-256-gcm";
@@ -19,7 +19,7 @@ export function encrypt(plainText) {
   // 1. Make a random IV. This makes the output different every time.
   const iv = crypto.randomBytes(12);
 
-  // 2. Create the cipher using our key and the IV.
+  // 2. Create the cipher using the key and the IV.
   const cipher = crypto.createCipheriv(ALGO, getKey(), iv);
 
   // 3. Encrypt the text into hex.
@@ -29,7 +29,7 @@ export function encrypt(plainText) {
   // 4. Get the auth tag. It is used later to check the data was not changed.
   const authTag = cipher.getAuthTag().toString("hex");
 
-  // 5. Join the three parts with ":" so we can split them again later.
+  // 5. Join the three parts with ":" so they can be split again later.
   return iv.toString("hex") + ":" + authTag + ":" + encrypted;
 }
 

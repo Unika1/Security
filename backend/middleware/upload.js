@@ -6,13 +6,13 @@ import fs from "fs";
 // Handles tour image uploads from the admin dashboard.
 // Rules:
 // only JPG, PNG or WebP files are allowed (checked by MIME type),
-// the max size is 2 MB, and we give each file a random name so a
+// the max size is 2 MB, and each file is given a random name so a
 // bad filename like "photo.jpg.exe" cannot cause problems.
 
 export const UPLOAD_DIR = path.resolve("uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
-// Allowed image types and the extension we save them with.
+// Allowed image types and the extension they are saved with.
 const ALLOWED_TYPES = {
   "image/jpeg": ".jpg",
   "image/png": ".png",

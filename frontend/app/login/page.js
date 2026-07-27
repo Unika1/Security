@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [resending, setResending] = useState(false);
 
   // STEP 1: send email + password. If correct, the server emails a code and
-  // asks us to move to the code-entry step.
+  // tells the page to move to the code-entry step.
   async function handlePasswordSubmit(event) {
     event.preventDefault();
     setError("");
@@ -51,7 +51,7 @@ export default function LoginPage() {
     }
   }
 
-  // STEP 2: send the 6-digit code. If correct, we're logged in.
+  // STEP 2: send the 6-digit code. If correct, the user is logged in.
   async function handleOtpSubmit(event) {
     event.preventDefault();
     setError("");
@@ -75,7 +75,7 @@ export default function LoginPage() {
   }
 
   // Ask the server to email a fresh code. The server refuses if the last one
-  // was sent under 30 seconds ago (it tells us how long to wait).
+  // was sent under 30 seconds ago (it indicates how long to wait).
   async function handleResend() {
     setError("");
     setNotice("");
